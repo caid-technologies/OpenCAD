@@ -1,6 +1,6 @@
 # OpenCAD
 
-Geometry kernel, 2D constraint solver, parametric feature tree, 3D viewport, and AI modeling agent
+A modular CAD system for parametric, programmable, and AI-assisted design
 
 ## Components
 
