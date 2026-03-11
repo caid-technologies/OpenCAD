@@ -70,8 +70,8 @@ python -m twine upload --repository testpypi dist/*
 After the upload succeeds, create and push a matching Git tag:
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
-Replace `v0.2.0` with the version you released.
+Replace `X.Y.Z` with the version you released.
