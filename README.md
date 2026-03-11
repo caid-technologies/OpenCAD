@@ -148,6 +148,7 @@ python -m opencad.cli run examples/hardware_mounting_bracket.py \
 ## Documentation
 
 - [PRODUCTION.md](PRODUCTION.md) — deployment, routes, and verification
+- [RELEASING.md](RELEASING.md) — build and publish OpenCAD to PyPI
 - [ARCHITECTURE.md](ARCHITECTURE.md) — component design and API contracts
 - [TOPOLOGY.md](TOPOLOGY.md) — topology reference stability (open research question)
 - [SECURITY.md](SECURITY.md) — vulnerability reporting and hardening baseline
