@@ -337,10 +337,16 @@ def test_planner_execute_handles_cube_request() -> None:
     extrude_op = response.operations_executed[1]
     assert extrude_op.arguments["depth"] == 30.0
 
-    # Sketch entities should form a 30x30 square
+    # Verify sketch forms a complete 30x30 square
     entities = sketch_op.arguments["entities"]
-    line_1 = entities["l1"]
-    assert line_1["end"][0] == 30.0  # length is 30
+    assert entities["l1"]["start"] == (0.0, 0.0)
+    assert entities["l1"]["end"] == (30.0, 0.0)
+    assert entities["l2"]["start"] == (30.0, 0.0)
+    assert entities["l2"]["end"] == (30.0, 30.0)
+    assert entities["l3"]["start"] == (30.0, 30.0)
+    assert entities["l3"]["end"] == (0.0, 30.0)
+    assert entities["l4"]["start"] == (0.0, 30.0)
+    assert entities["l4"]["end"] == (0.0, 0.0)
 
 
 def test_chat_api_can_generate_cube_code() -> None:
