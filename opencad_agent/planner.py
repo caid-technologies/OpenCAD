@@ -1,9 +1,43 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Callable
 
 from opencad_agent.models import OperationExecution
 from opencad_agent.tools import ToolRuntime
+
+
+def _parse_cube_dimensions(message: str) -> tuple[float, float, float] | None:
+    """Extract cube/box dimensions from a user message.
+
+    Supports formats like:
+    - "30x30x30 mm" or "30x30x30mm"
+    - "30 mm cube" or "30mm cube"
+    - "cube of 30 mm" or "cube of 30mm"
+    - "box 10x20x30"
+
+    Returns (length, width, height) or None if not found.
+    """
+    lowered = message.lower()
+
+    # Pattern: NxNxN (e.g., "30x30x30 mm")
+    match = re.search(r"(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)", lowered)
+    if match:
+        return float(match.group(1)), float(match.group(2)), float(match.group(3))
+
+    # Pattern: N mm cube or Nmm cube (uniform cube)
+    match = re.search(r"(\d+(?:\.\d+)?)\s*(?:mm)?\s*cube", lowered)
+    if match:
+        size = float(match.group(1))
+        return size, size, size
+
+    # Pattern: cube of N mm or cube of Nmm
+    match = re.search(r"cube\s+of\s+(\d+(?:\.\d+)?)", lowered)
+    if match:
+        size = float(match.group(1))
+        return size, size, size
+
+    return None
 
 
 class OpenCadPlanner:
@@ -20,6 +54,18 @@ class OpenCadPlanner:
             else:
                 response = "Mounting bracket feature sequence generated and executed."
             return response, operations
+
+        # Handle cube/box requests with dimension parsing
+        if "cube" in lowered or "box" in lowered:
+            dims = _parse_cube_dimensions(message)
+            if dims:
+                length, width, height = dims
+                operations = self._build_box(runtime, length, width, height)
+                if reasoning:
+                    response = f"Plan: create {length}x{width}x{height} box via sketch and extrude. Sequence executed."
+                else:
+                    response = f"Created a {length}x{width}x{height} box."
+                return response, operations
 
         operations = self._build_simple_feature(runtime)
         response = "Executed a minimal sketch-to-extrude sequence for the request."
@@ -42,6 +88,43 @@ class OpenCadPlanner:
             error = {"error": str(exc)}
             operations.append(OperationExecution(tool=tool, status="error", arguments=arguments, result=error))
             raise
+
+    def _build_box(self, runtime: ToolRuntime, length: float, width: float, height: float) -> list[OperationExecution]:
+        """Build a box/cube with the specified dimensions via sketch + extrude."""
+        operations: list[OperationExecution] = []
+
+        box_sketch_args = {
+            "name": "Box Base Sketch",
+            "entities": {
+                "l1": {"id": "l1", "type": "line", "start": (0.0, 0.0), "end": (length, 0.0)},
+                "l2": {"id": "l2", "type": "line", "start": (length, 0.0), "end": (length, width)},
+                "l3": {"id": "l3", "type": "line", "start": (length, width), "end": (0.0, width)},
+                "l4": {"id": "l4", "type": "line", "start": (0.0, width), "end": (0.0, 0.0)},
+            },
+            "profile_order": ["l1", "l2", "l3", "l4"],
+            "constraints": [
+                {"id": "d1", "type": "distance", "a": "l1", "value": length},
+                {"id": "d2", "type": "distance", "a": "l2", "value": width},
+            ],
+        }
+
+        sketch = self._safe_call(
+            operations,
+            "add_sketch",
+            box_sketch_args,
+            lambda: {"sketch_id": runtime.add_sketch(**box_sketch_args)},
+        )
+        sketch_id = str(sketch["sketch_id"])
+
+        extrude_args = {"sketch_id": sketch_id, "depth": height, "name": "Box Extrude"}
+        self._safe_call(
+            operations,
+            "extrude",
+            extrude_args,
+            lambda: {"feature_id": runtime.extrude(**extrude_args)},
+        )
+
+        return operations
 
     def _build_simple_feature(self, runtime: ToolRuntime) -> list[OperationExecution]:
         operations: list[OperationExecution] = []
@@ -255,6 +338,25 @@ class OpenCadPlanner:
                 '    name="Carrier Plate",\n'
                 ').offset(0.4, name="Carrier Reinforcement")\n'
             )
+
+        # Handle cube/box requests
+        if "cube" in lowered or "box" in lowered:
+            dims = _parse_cube_dimensions(message)
+            if dims:
+                length, width, height = dims
+                # Check if it's a uniform cube
+                if length == width == height:
+                    return (
+                        f'"""Generated OpenCAD example: {length}mm cube."""\n\n'
+                        "from opencad import Part\n\n\n"
+                        f'Part(name="Generated Cube").box({length}, {length}, {length}, name="Cube")\n'
+                    )
+                else:
+                    return (
+                        f'"""Generated OpenCAD example: {length}x{width}x{height} box."""\n\n'
+                        "from opencad import Part\n\n\n"
+                        f'Part(name="Generated Box").box({length}, {width}, {height}, name="Box")\n'
+                    )
 
         return (
             '"""Generated OpenCAD example: simple extruded part."""\n\n'
