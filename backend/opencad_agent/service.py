@@ -127,9 +127,10 @@ class OpenCadAgentService:
         model = os.environ.get("OPENCAD_LLM_MODEL")
 
         if model:
+            built_system_prompt = build_code_generation_prompt(request.tree_state)
             return self.llm_client.generate_code(
                 model=model,
-                system_prompt=build_code_generation_prompt(request.tree_state),
+                system_prompt=built_system_prompt,
                 user_message=request.message,
                 conversation_history=request.conversation_history,
                 reasoning=request.reasoning,
