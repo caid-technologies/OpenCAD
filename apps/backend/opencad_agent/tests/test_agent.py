@@ -294,6 +294,23 @@ def test_chat_requires_configured_model(monkeypatch: pytest.MonkeyPatch) -> None
         )
 
 
+def test_chat_reports_missing_litellm_as_configuration_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENCAD_LLM_MODEL", "test-model")
+
+    def missing_litellm(**_: object) -> object:
+        raise ModuleNotFoundError("No module named 'litellm'", name="litellm")
+
+    service = OpenCadAgentService(
+        live_kernel=False,
+        llm_client=LiteLlmProvider(completion_func=missing_litellm),
+    )
+
+    with pytest.raises(AgentConfigurationError, match="uv sync --extra llm"):
+        service.chat(ChatRequest(message="Build a cog", tree_state=_seed_tree()))
+
+
 def test_chat_request_requires_model_when_provider_is_set() -> None:
     with pytest.raises(ValueError, match="llm_model is required"):
         ChatRequest(

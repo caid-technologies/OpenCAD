@@ -1987,6 +1987,7 @@ occt = [
     { name = "cadquery-ocp" },
 ]
 server = [
+    { name = "litellm" },
     { name = "uvicorn" },
 ]
 test = [
@@ -2003,6 +2004,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
     { name = "litellm", marker = "extra == 'full'", specifier = ">=1.82.1" },
     { name = "litellm", marker = "extra == 'llm'", specifier = ">=1.82.1" },
+    { name = "litellm", marker = "extra == 'server'", specifier = ">=1.82.1" },
     { name = "networkx", marker = "extra == 'full'", specifier = ">=3" },
     { name = "numpy", specifier = ">=2" },
     { name = "openai", marker = "extra == 'full'", specifier = ">=1.40" },

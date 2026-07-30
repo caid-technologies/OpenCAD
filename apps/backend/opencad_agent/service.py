@@ -146,5 +146,12 @@ class OpenCadAgentService:
                 user_message=user_message or request.message,
                 conversation_history=request.conversation_history,
             )
+        except ModuleNotFoundError as exc:
+            if exc.name == "litellm":
+                raise AgentConfigurationError(
+                    "Chat requires the LiteLLM dependency. "
+                    "Install it with: uv sync --extra llm"
+                ) from exc
+            raise LlmGenerationError(f"LLM code generation failed: {exc}") from exc
         except Exception as exc:
             raise LlmGenerationError(f"LLM code generation failed: {exc}") from exc
