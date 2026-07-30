@@ -14,7 +14,7 @@ from opencad_agent.models import ChatRequest
 from opencad_agent.planner import UnsupportedPromptError
 from opencad_agent.prompting import build_code_generation_prompt, build_system_prompt
 from opencad_agent.service import AgentConfigurationError, OpenCadAgentService
-from opencad_agent.tools import ToolRuntime
+from opencad_agent.tools import ToolRuntime, _kernel_operation_url
 from opencad_kernel.core.models import Success
 from opencad_kernel.operations.handlers import OpenCadKernel
 from opencad_kernel.operations.registry import OperationRegistry
@@ -38,6 +38,16 @@ def _seed_tree() -> FeatureTree:
             )
         },
     )
+
+
+def test_kernel_operation_url_does_not_duplicate_gateway_prefix(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("opencad_agent.tools._KERNEL_URL", "http://127.0.0.1:8000/kernel")
+    assert _kernel_operation_url("create_cylinder") == "http://127.0.0.1:8000/kernel/operations/create_cylinder"
+
+
+def test_kernel_operation_url_adds_gateway_prefix(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("opencad_agent.tools._KERNEL_URL", "http://127.0.0.1:8000")
+    assert _kernel_operation_url("create_cylinder") == "http://127.0.0.1:8000/kernel/operations/create_cylinder"
 
 
 def test_system_prompt_contains_required_instructions() -> None:
