@@ -14,6 +14,7 @@ const OPERATION_ICONS: Record<string, string> = {
   boolean_intersection: "BI",
   fillet: "FL",
   add_sketch: "SK",
+  create_sketch: "SK",
   add_cylinder: "CY",
   default: "ND"
 };

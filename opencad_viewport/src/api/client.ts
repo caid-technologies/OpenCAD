@@ -29,7 +29,7 @@ export class OpenCadApiClient {
   constructor(
     baseUrl = import.meta.env.VITE_BASE_URL ?? "http://127.0.0.1:8000",
     kernelUrl?: string,
-    useMock = import.meta.env.VITE_USE_MOCK !== "false",
+    useMock = import.meta.env.VITE_USE_MOCK === "true",
     useChatMock = import.meta.env.VITE_USE_CHAT_MOCK === "true",
   ) {
     this.baseUrl = baseUrl;
@@ -62,6 +62,29 @@ export class OpenCadApiClient {
 
   async getTree(treeId: string): Promise<FeatureTreeView> {
     const response = await axios.get<FeatureTreeView>(`${this.baseUrl}/tree/trees/${treeId}`);
+    return response.data;
+  }
+
+  async updateSketch(
+    tree: FeatureTreeView,
+    nodeId: string,
+    sketch: SketchPayload,
+  ): Promise<FeatureTreeView> {
+    const treeId = encodeURIComponent(tree.root_id);
+    const encodedNodeId = encodeURIComponent(nodeId);
+    await axios.post(`${this.baseUrl}/tree/trees`, tree);
+    await axios.put(
+      `${this.baseUrl}/tree/trees/${treeId}/nodes/${encodedNodeId}/sketch`,
+      sketch,
+    );
+    const response = await axios.post<FeatureTreeView>(
+      `${this.baseUrl}/tree/trees/${treeId}/rebuild`,
+      { continue_on_error: false },
+    );
+    const failedNode = Object.values(response.data.nodes).find((node) => node.status === "failed");
+    if (failedNode) {
+      throw new Error(`Rebuild failed at ${failedNode.name}.`);
+    }
     return response.data;
   }
 

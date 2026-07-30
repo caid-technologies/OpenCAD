@@ -133,8 +133,10 @@ body {
   position: absolute;
   right: 16px;
   top: 16px;
-  width: 340px;
+  width: 430px;
   max-width: calc(100% - 32px);
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid #d7dde7;
   border-radius: 12px;
@@ -151,11 +153,43 @@ body {
   margin-bottom: 8px;
 }
 
+.sketch-header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.sketch-name {
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.sketch-solver-status {
+  max-width: 255px;
+  color: #475569;
+  text-align: right;
+}
+
 .sketch-canvas {
   width: 100%;
   border: 1px solid #e2e7ef;
   border-radius: 10px;
   background: #fbfcff;
+}
+
+.sketch-geometry {
+  fill: none;
+  stroke: #0f172a;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.sketch-point {
+  fill: #0f172a;
+}
+
+.sketch-empty {
+  fill: #94a3b8;
+  font-size: 12px;
 }
 
 .constraint-icon {
@@ -172,6 +206,63 @@ body {
   overflow-y: auto;
 }
 
+.sketch-section-title {
+  margin-top: 9px;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.entity-grid {
+  display: grid;
+  gap: 5px;
+  margin-top: 5px;
+  max-height: 155px;
+  overflow-y: auto;
+}
+
+.entity-row {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.7rem;
+}
+
+.entity-row > span {
+  overflow: hidden;
+  color: #475569;
+  text-overflow: ellipsis;
+}
+
+.entity-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.entity-fields label {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.entity-fields label span {
+  color: #64748b;
+  font-size: 0.62rem;
+}
+
+.entity-fields input {
+  width: 58px;
+}
+
+.sketch-empty-row {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
 .constraint-row {
   display: grid;
   grid-template-columns: 70px 1fr 80px;
@@ -182,6 +273,34 @@ body {
 
 .constraint-row input {
   width: 100%;
+}
+
+.sketch-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sketch-actions button {
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 10px;
+  background: #0b63da;
+  color: white;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.sketch-actions button:disabled {
+  background: #cbd5e1;
+  cursor: default;
+}
+
+.sketch-save-error {
+  color: #b42318;
+  font-size: 0.7rem;
 }
 
 .chat-panel {
