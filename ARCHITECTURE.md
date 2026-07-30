@@ -1,5 +1,15 @@
 # Architecture
 
+## Geometry Backend Boundary
+
+- `opencad_kernel.operations.handlers.OpenCadKernel` is the stable coordinator used by the registry and public APIs.
+- Geometry is implemented behind `KernelBackend`; the coordinator contains no geometry algorithms.
+- `opencad_kernel.core.occt_backend.OcctBackend` owns production B-rep construction, topology, file I/O, and tessellation.
+- `opencad_kernel.core.analytic_backend.AnalyticBackend` owns the metadata-only approximation used by lightweight and isolated tests.
+- Assembly mates and the shared topology selector stay in the coordinator because they are application-level behavior rather than geometry-engine behavior.
+- Every operation-log entry records the concrete backend class that executed it, allowing snapshots and diagnostics to distinguish analytic results from OCCT results.
+- Face-by-face mesh streaming is tracked separately through the optional `StreamingMeshBackend` capability.
+
 ## 4 – Viewport Application (`opencad_viewport`)
 
 ### Frontend Components

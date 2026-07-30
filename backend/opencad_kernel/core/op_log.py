@@ -25,6 +25,7 @@ class OpLogEntry(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     operation: str
     version: str
+    backend: str | None = None
     params: dict[str, Any] = Field(default_factory=dict)
     result_shape_id: str | None = None
     success: bool = True

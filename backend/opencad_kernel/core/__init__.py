@@ -1,4 +1,5 @@
-from .backend import KernelBackend
+from .analytic_backend import AnalyticBackend
+from .backend import KernelBackend, StreamingMeshBackend
 from .errors import ErrorCode, Failure, make_failure
 from .models import (
     BoundingBox,
@@ -14,6 +15,7 @@ from .store import ShapeStore
 
 __all__ = [
     "BoundingBox",
+    "AnalyticBackend",
     "ErrorCode",
     "Failure",
     "KernelBackend",
@@ -24,6 +26,7 @@ __all__ = [
     "SubshapeKind",
     "SubshapeRef",
     "Success",
+    "StreamingMeshBackend",
     "TopologyMap",
     "make_failure",
 ]

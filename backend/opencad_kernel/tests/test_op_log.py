@@ -76,6 +76,7 @@ def test_successful_operation_is_logged(registry: OperationRegistry):
     assert entry.version == "1.0.0"
     assert entry.success is True
     assert entry.result_shape_id == result.shape_id
+    assert entry.backend == "AnalyticBackend"
     assert entry.duration_ms >= 0.0
     assert entry.params == {"length": 2.0, "width": 3.0, "height": 4.0}
 

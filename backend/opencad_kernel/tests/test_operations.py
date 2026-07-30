@@ -313,7 +313,7 @@ def test_boolean_kernel_exception_is_caught(kernel: OpenCadKernel, monkeypatch) 
     def _boom(*args, **kwargs):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr(kernel, "_run_boolean", _boom)
+    monkeypatch.setattr(kernel.backend, "_run_boolean", _boom)
     result = kernel.boolean_union(BooleanInput(shape_a_id=a_id, shape_b_id=b_id))
     assert isinstance(result, Failure)
     assert result.code == ErrorCode.BOOLEAN_KERNEL_ERROR
