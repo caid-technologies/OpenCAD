@@ -65,6 +65,37 @@ def test_code_generation_prompt_contains_api_guidance() -> None:
     assert "Do not use filesystem" in prompt
     assert "Valid repeated-feature composition example" in prompt
     assert "Each Sketch variable may call exactly one" in prompt
+    for primitive in ("box", "cylinder", "sphere", "cone", "torus"):
+        assert f".{primitive}(" in prompt
+    assert "A torus must use `Part(name=...).torus" in prompt
+
+
+def test_chat_executes_native_torus_primitive() -> None:
+    generated_code = (
+        "from opencad import Part, Sketch\n"
+        'result = Part(name="Torus").torus('
+        'major_radius=30, minor_radius=10, name="Torus")\n'
+    )
+    service = OpenCadAgentService(
+        live_kernel=False,
+        llm_client=LiteLlmProvider(
+            completion_func=lambda **_: {"choices": [{"message": {"content": generated_code}}]}
+        ),
+    )
+
+    response = service.chat(
+        ChatRequest(
+            message="Output a torus",
+            tree_state=_seed_tree(),
+            llm_model="test-model",
+        )
+    )
+
+    assert [operation.tool for operation in response.operations_executed] == ["create_torus"]
+    assert response.operations_executed[0].arguments == {
+        "major_radius": 30.0,
+        "minor_radius": 10.0,
+    }
 
 
 def test_chat_api_can_return_generated_code(monkeypatch: pytest.MonkeyPatch) -> None:
