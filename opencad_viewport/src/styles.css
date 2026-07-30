@@ -129,6 +129,63 @@ body {
   height: 100%;
 }
 
+.cad-file-toolbar {
+  position: absolute;
+  z-index: 20;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100% - 32px);
+  padding: 8px;
+  border: 1px solid #d7dde7;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 6px 18px rgba(15, 24, 38, 0.12);
+}
+
+.cad-file-input {
+  display: none;
+}
+
+.cad-import-button {
+  display: none;
+}
+
+.cad-file-toolbar button,
+.cad-file-toolbar select {
+  min-height: 30px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: white;
+  color: #1e293b;
+}
+
+.cad-file-toolbar button {
+  padding: 5px 9px;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.cad-file-toolbar button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.cad-file-toolbar select {
+  padding: 4px 6px;
+}
+
+.cad-file-message {
+  max-width: 150px;
+  overflow: hidden;
+  color: #475569;
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sketch-overlay {
   position: absolute;
   right: 16px;

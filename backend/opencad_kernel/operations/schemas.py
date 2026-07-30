@@ -169,6 +169,15 @@ class ExportStepInput(BaseModel):
     filepath: str = Field(min_length=1)
 
 
+class ImportStlInput(BaseModel):
+    filepath: str = Field(min_length=1)
+
+
+class ExportStlInput(BaseModel):
+    shape_id: str = Field(min_length=1)
+    filepath: str = Field(min_length=1)
+
+
 # ── Assembly mates (3-D constraints — Phase 1) ────────────────────
 
 

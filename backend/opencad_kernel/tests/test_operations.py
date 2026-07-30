@@ -13,8 +13,10 @@ from opencad_kernel.operations.schemas import (
     CreateBoxInput,
     CreateCylinderInput,
     CreateSphereInput,
+    ExportStlInput,
     ExportStepInput,
     FilletEdgesInput,
+    ImportStlInput,
     ImportStepInput,
     OffsetShapeInput,
 )
@@ -250,6 +252,29 @@ def test_export_step_missing_shape_fails(kernel: OpenCadKernel, tmp_path) -> Non
     assert result.code == ErrorCode.SHAPE_NOT_FOUND
 
 
+def test_stl_export_import_roundtrip(kernel: OpenCadKernel, tmp_path) -> None:
+    box = kernel.create_box(CreateBoxInput(length=4.0, width=3.0, height=2.0))
+    assert isinstance(box, Success) and box.shape_id
+
+    stl_path = tmp_path / "box.stl"
+    export_result = kernel.export_stl(ExportStlInput(shape_id=box.shape_id, filepath=str(stl_path)))
+    assert isinstance(export_result, Success)
+    assert stl_path.read_text(encoding="utf-8").startswith("solid opencad")
+
+    import_result = kernel.import_stl(ImportStlInput(filepath=str(stl_path)))
+    assert isinstance(import_result, Success)
+    assert import_result.shape is not None
+    assert import_result.shape.bbox == box.shape.bbox
+
+
+def test_export_stl_missing_shape_fails(kernel: OpenCadKernel, tmp_path) -> None:
+    result = kernel.export_stl(
+        ExportStlInput(shape_id="missing", filepath=str(tmp_path / "missing.stl"))
+    )
+    assert isinstance(result, Failure)
+    assert result.code == ErrorCode.SHAPE_NOT_FOUND
+
+
 def test_registry_has_all_10_operations(registry: OperationRegistry) -> None:
     ops = registry.list_operations()
     assert len(ops) >= 10
@@ -264,6 +289,8 @@ def test_registry_has_all_10_operations(registry: OperationRegistry) -> None:
         "offset_shape",
         "import_step",
         "export_step",
+        "import_stl",
+        "export_stl",
     }.issubset(set(ops))
 
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import struct
 from math import pow
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
@@ -44,10 +45,12 @@ from opencad_kernel.operations.schemas import (
     CreateTorusInput,
     DeleteAssemblyMateInput,
     DraftInput,
+    ExportStlInput,
     ExportStepInput,
     ExtrudeInput,
     FilletEdgesInput,
     ImportStepInput,
+    ImportStlInput,
     LinearPatternInput,
     ListAssemblyMatesInput,
     LoftInput,
@@ -63,6 +66,78 @@ if TYPE_CHECKING:
     from opencad_kernel.core.backend import KernelBackend
 
 BooleanOp = Literal["boolean_union", "boolean_cut", "boolean_intersection"]
+
+
+def _read_stl_vertices(filepath: Path) -> list[tuple[float, float, float]]:
+    data = filepath.read_bytes()
+    vertices: list[tuple[float, float, float]] = []
+
+    if data.lstrip().lower().startswith(b"solid"):
+        for line in data.decode("utf-8", errors="ignore").splitlines():
+            fields = line.strip().split()
+            if len(fields) == 4 and fields[0].lower() == "vertex":
+                vertices.append((float(fields[1]), float(fields[2]), float(fields[3])))
+        if vertices:
+            return vertices
+
+    if len(data) < 84:
+        raise ValueError("STL file is too short.")
+    triangle_count = struct.unpack_from("<I", data, 80)[0]
+    expected_size = 84 + triangle_count * 50
+    if len(data) < expected_size:
+        raise ValueError("Binary STL triangle data is truncated.")
+    for triangle_index in range(triangle_count):
+        offset = 84 + triangle_index * 50 + 12
+        coordinates = struct.unpack_from("<9f", data, offset)
+        vertices.extend(
+            (coordinates[index], coordinates[index + 1], coordinates[index + 2])
+            for index in range(0, 9, 3)
+        )
+    return vertices
+
+
+def _triangle_normal(
+    a: tuple[float, float, float],
+    b: tuple[float, float, float],
+    c: tuple[float, float, float],
+) -> tuple[float, float, float]:
+    ux, uy, uz = b[0] - a[0], b[1] - a[1], b[2] - a[2]
+    vx, vy, vz = c[0] - a[0], c[1] - a[1], c[2] - a[2]
+    nx, ny, nz = uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx
+    length = math.sqrt(nx * nx + ny * ny + nz * nz)
+    if length <= 1e-12:
+        return (0.0, 0.0, 0.0)
+    return (nx / length, ny / length, nz / length)
+
+
+def _bbox_stl(shape: ShapeData) -> str:
+    box = shape.bbox
+    points = [
+        (box.min_x, box.min_y, box.min_z),
+        (box.max_x, box.min_y, box.min_z),
+        (box.max_x, box.max_y, box.min_z),
+        (box.min_x, box.max_y, box.min_z),
+        (box.min_x, box.min_y, box.max_z),
+        (box.max_x, box.min_y, box.max_z),
+        (box.max_x, box.max_y, box.max_z),
+        (box.min_x, box.max_y, box.max_z),
+    ]
+    triangles = [
+        (0, 2, 1), (0, 3, 2), (4, 5, 6), (4, 6, 7),
+        (0, 1, 5), (0, 5, 4), (1, 2, 6), (1, 6, 5),
+        (2, 3, 7), (2, 7, 6), (3, 0, 4), (3, 4, 7),
+    ]
+    lines = ["solid opencad"]
+    for first, second, third in triangles:
+        a, b, c = points[first], points[second], points[third]
+        normal = _triangle_normal(a, b, c)
+        lines.append(f"  facet normal {normal[0]} {normal[1]} {normal[2]}")
+        lines.append("    outer loop")
+        for vertex in (a, b, c):
+            lines.append(f"      vertex {vertex[0]} {vertex[1]} {vertex[2]}")
+        lines.extend(("    endloop", "  endfacet"))
+    lines.append("endsolid opencad")
+    return "\n".join(lines) + "\n"
 
 
 class OpenCadKernel:
@@ -449,6 +524,73 @@ class OpenCadKernel:
             )
 
         return Success(shape_id=shape.id, shape=None, metadata={"operation": "export_step", "filepath": payload.filepath})
+
+    def import_stl(self, payload: ImportStlInput) -> OperationResult:
+        if self._backend is not None:
+            return self._backend.import_stl(payload)
+        filepath = Path(payload.filepath)
+        if filepath.suffix.lower() != ".stl":
+            return make_failure(
+                code=ErrorCode.UNSUPPORTED_FILE_FORMAT,
+                message="STL import requires a .stl file.",
+                suggestion="Choose an STL file.",
+                failed_check="stl_extension",
+            )
+        try:
+            vertices = _read_stl_vertices(filepath)
+        except (OSError, ValueError, struct.error) as exc:
+            return make_failure(
+                code=ErrorCode.IO_ERROR,
+                message=f"Failed to read STL file: {exc}",
+                suggestion="Verify that the file is a valid ASCII or binary STL.",
+                failed_check="stl_io",
+            )
+        if len(vertices) < 3:
+            return make_failure(
+                code=ErrorCode.IO_ERROR,
+                message="STL file contains no triangles.",
+                suggestion="Choose a non-empty STL file.",
+                failed_check="stl_geometry",
+            )
+        xs, ys, zs = zip(*vertices)
+        bbox = BoundingBox(
+            min_x=min(xs), min_y=min(ys), min_z=min(zs),
+            max_x=max(xs), max_y=max(ys), max_z=max(zs),
+        )
+        shape = self._make_shape(
+            kind="imported_stl",
+            bbox=bbox,
+            volume=max(self.tolerance, bbox.volume()),
+            parameters={"filepath": payload.filepath},
+            edge_count=len(vertices),
+            face_count=len(vertices) // 3,
+        )
+        return self._success(shape, "import_stl", imported_from=payload.filepath)
+
+    def export_stl(self, payload: ExportStlInput) -> OperationResult:
+        if self._backend is not None:
+            return self._backend.export_stl(payload)
+        shape = self.store.get(payload.shape_id)
+        if not shape:
+            return self._shape_not_found(payload.shape_id)
+        filepath = Path(payload.filepath)
+        if filepath.suffix.lower() != ".stl":
+            return make_failure(
+                code=ErrorCode.UNSUPPORTED_FILE_FORMAT,
+                message="STL export requires a .stl destination.",
+                suggestion="Use a filename ending in .stl.",
+                failed_check="stl_extension",
+            )
+        try:
+            filepath.write_text(_bbox_stl(shape), encoding="utf-8")
+        except OSError as exc:
+            return make_failure(
+                code=ErrorCode.IO_ERROR,
+                message=f"Failed to write STL file: {exc}",
+                suggestion="Verify destination directory permissions.",
+                failed_check="stl_io",
+            )
+        return Success(shape_id=shape.id, shape=None, metadata={"operation": "export_stl", "filepath": payload.filepath})
 
     # ── Tessellation (delegates to backend) ─────────────────────────
 

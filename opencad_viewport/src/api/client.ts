@@ -3,6 +3,8 @@ import { mockChat, mockSolveSketch } from "../mock/mockData";
 import type {
   ChatRequestPayload,
   ChatResponsePayload,
+  CadFileFormat,
+  CadImportResult,
   FeatureTreeView,
   MeshPayload,
   SketchPayload,
@@ -104,6 +106,33 @@ export class OpenCadApiClient {
       { params: { deflection } },
     );
     return { ...response.data, shapeId };
+  }
+
+  async importCadFile(file: File): Promise<CadImportResult> {
+    const response = await axios.post<CadImportResult>(
+      `${this.kernelUrl}/files/import`,
+      file,
+      {
+        params: { filename: file.name },
+        headers: { "Content-Type": "application/octet-stream" },
+      },
+    );
+    return response.data;
+  }
+
+  async exportCadFile(
+    shapeId: string,
+    format: CadFileFormat,
+    filename: string,
+  ): Promise<Blob> {
+    const response = await axios.get<Blob>(
+      `${this.kernelUrl}/files/${encodeURIComponent(shapeId)}/export`,
+      {
+        params: { format, filename },
+        responseType: "blob",
+      },
+    );
+    return response.data;
   }
 
   /**

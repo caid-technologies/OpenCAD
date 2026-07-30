@@ -57,6 +57,14 @@ export interface MeshPayload {
   name?: string;
 }
 
+export type CadFileFormat = "step" | "stp" | "stl";
+
+export interface CadImportResult {
+  shape_id: string;
+  filename: string;
+  format: CadFileFormat;
+}
+
 export interface SketchPoint {
   id: string;
   type: "point";

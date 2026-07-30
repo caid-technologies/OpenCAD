@@ -73,6 +73,7 @@ TopExp_Explorer = None
 TopLoc_Location = None
 TopoDS = None
 TopoDS_Shape = Any
+StlAPI_Reader = None
 
 # Lists
 TopTools_ListOfShape = None
@@ -143,6 +144,8 @@ if HAS_OCCT:  # pragma: no branch
     TopoDS = topods_mod.TopoDS
     TopoDS_Shape = topods_mod.TopoDS_Shape
 
+    StlAPI_Reader = importlib.import_module("OCP.StlAPI").StlAPI_Reader
+
     TopTools_ListOfShape = importlib.import_module("OCP.TopTools").TopTools_ListOfShape
 
 from opencad_kernel.core.checks import check_bbox_overlap, check_manifold, check_nonzero_volume
@@ -170,10 +173,12 @@ from opencad_kernel.operations.schemas import (
     CreateSphereInput,
     CreateTorusInput,
     DraftInput,
+    ExportStlInput,
     ExportStepInput,
     ExtrudeInput,
     FilletEdgesInput,
     ImportStepInput,
+    ImportStlInput,
     LinearPatternInput,
     LoftInput,
     MirrorInput,
@@ -869,7 +874,11 @@ class OcctBackend:
 
         try:
             wp = cq.Workplane("XY").newObject([cq.Shape(native)])
-            cq.exporters.export(wp, str(payload.filepath))
+            cq.exporters.export(
+                wp,
+                str(payload.filepath),
+                exportType=cq.exporters.ExportTypes.STEP,
+            )
         except Exception as exc:
             return make_failure(
                 code=ErrorCode.IO_ERROR,
@@ -882,6 +891,59 @@ class OcctBackend:
             shape_id=meta.id,
             shape=None,
             metadata={"operation": "export_step", "filepath": payload.filepath},
+        )
+
+    def import_stl(self, payload: ImportStlInput) -> OperationResult:
+        filepath = Path(payload.filepath)
+        if filepath.suffix.lower() != ".stl":
+            return make_failure(
+                code=ErrorCode.UNSUPPORTED_FILE_FORMAT,
+                message="STL import requires a .stl file.",
+                suggestion="Choose an STL file.",
+                failed_check="stl_extension",
+            )
+        try:
+            native = TopoDS_Shape()
+            if not StlAPI_Reader().Read(native, str(filepath)) or native.IsNull():
+                raise ValueError("OCCT could not read any shape data.")
+        except Exception as exc:
+            return make_failure(
+                code=ErrorCode.IO_ERROR,
+                message=f"Failed to read STL file: {exc}",
+                suggestion="Verify that the file is a valid ASCII or binary STL.",
+                failed_check="stl_io",
+            )
+        shape = self._register_shape("imported_stl", native, {"filepath": payload.filepath})
+        return self._success(shape, "import_stl", imported_from=payload.filepath)
+
+    def export_stl(self, payload: ExportStlInput) -> OperationResult:
+        meta = self._store.get(payload.shape_id)
+        if not meta:
+            return self._shape_not_found(payload.shape_id)
+        filepath = Path(payload.filepath)
+        if filepath.suffix.lower() != ".stl":
+            return make_failure(
+                code=ErrorCode.UNSUPPORTED_FILE_FORMAT,
+                message="STL export requires a .stl destination.",
+                suggestion="Use a filename ending in .stl.",
+                failed_check="stl_extension",
+            )
+        native = self._get_native(payload.shape_id)
+        if native is None:
+            return self._shape_not_found(payload.shape_id)
+        try:
+            cq.exporters.export(cq.Shape(native), str(filepath), exportType=cq.exporters.ExportTypes.STL)
+        except Exception as exc:
+            return make_failure(
+                code=ErrorCode.IO_ERROR,
+                message=f"Failed to write STL file: {exc}",
+                suggestion="Verify destination directory permissions.",
+                failed_check="stl_io",
+            )
+        return Success(
+            shape_id=meta.id,
+            shape=None,
+            metadata={"operation": "export_stl", "filepath": payload.filepath},
         )
 
     # ── Tessellation ────────────────────────────────────────────────

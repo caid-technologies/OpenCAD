@@ -16,6 +16,8 @@ const OPERATION_ICONS: Record<string, string> = {
   add_sketch: "SK",
   create_sketch: "SK",
   add_cylinder: "CY",
+  import_step: "IM",
+  import_stl: "IM",
   default: "ND"
 };
 

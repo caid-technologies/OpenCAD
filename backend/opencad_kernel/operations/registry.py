@@ -25,10 +25,12 @@ from opencad_kernel.operations.schemas import (
     CreateTorusInput,
     DeleteAssemblyMateInput,
     DraftInput,
+    ExportStlInput,
     ExportStepInput,
     ExtrudeInput,
     FilletEdgesInput,
     ImportStepInput,
+    ImportStlInput,
     LinearPatternInput,
     ListAssemblyMatesInput,
     LoftInput,
@@ -93,9 +95,11 @@ class OperationRegistry:
         self._register("linear_pattern", LinearPatternInput, self.kernel.linear_pattern)
         self._register("circular_pattern", CircularPatternInput, self.kernel.circular_pattern)
         self._register("mirror", MirrorInput, self.kernel.mirror)
-        # STEP I/O
+        # CAD file I/O
         self._register("import_step", ImportStepInput, self.kernel.import_step)
         self._register("export_step", ExportStepInput, self.kernel.export_step)
+        self._register("import_stl", ImportStlInput, self.kernel.import_stl)
+        self._register("export_stl", ExportStlInput, self.kernel.export_stl)
         # Assembly mates (3-D constraints — Phase 1)
         self._register("create_assembly_mate", CreateAssemblyMateInput, self.kernel.create_assembly_mate)
         self._register("delete_assembly_mate", DeleteAssemblyMateInput, self.kernel.delete_assembly_mate)
