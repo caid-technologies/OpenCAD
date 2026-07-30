@@ -6,6 +6,10 @@ from opencad_agent.models import OperationExecution
 from opencad_agent.tools import ToolRuntime
 
 
+class UnsupportedPromptError(ValueError):
+    """Raised when the deterministic planner does not support a prompt."""
+
+
 class OpenCadPlanner:
     def execute(self, message: str, runtime: ToolRuntime, reasoning: bool = False) -> tuple[str, list[OperationExecution]]:
         lowered = message.lower()
@@ -21,11 +25,9 @@ class OpenCadPlanner:
                 response = "Mounting bracket feature sequence generated and executed."
             return response, operations
 
-        operations = self._build_simple_feature(runtime)
-        response = "Executed a minimal sketch-to-extrude sequence for the request."
-        if reasoning:
-            response = "Plan: create sketch then extrude. Sequence executed with dependency-safe IDs."
-        return response, operations
+        raise UnsupportedPromptError(
+            "This request is not supported by the deterministic planner. Enable Generate Code to use the LLM."
+        )
 
     def _safe_call(
         self,
@@ -42,39 +44,6 @@ class OpenCadPlanner:
             error = {"error": str(exc)}
             operations.append(OperationExecution(tool=tool, status="error", arguments=arguments, result=error))
             raise
-
-    def _build_simple_feature(self, runtime: ToolRuntime) -> list[OperationExecution]:
-        operations: list[OperationExecution] = []
-
-        base_sketch_args = {
-            "name": "Simple Base Sketch",
-            "entities": {
-                "l1": {"id": "l1", "type": "line", "start": (0.0, 0.0), "end": (30.0, 0.0)},
-                "l2": {"id": "l2", "type": "line", "start": (30.0, 0.0), "end": (30.0, 20.0)},
-                "l3": {"id": "l3", "type": "line", "start": (30.0, 20.0), "end": (0.0, 20.0)},
-                "l4": {"id": "l4", "type": "line", "start": (0.0, 20.0), "end": (0.0, 0.0)},
-            },
-            "profile_order": ["l1", "l2", "l3", "l4"],
-            "constraints": [{"id": "d1", "type": "distance", "a": "l1", "value": 30.0}],
-        }
-
-        sketch = self._safe_call(
-            operations,
-            "add_sketch",
-            base_sketch_args,
-            lambda: {"sketch_id": runtime.add_sketch(**base_sketch_args)},
-        )
-        sketch_id = str(sketch["sketch_id"])
-
-        extrude_args = {"sketch_id": sketch_id, "depth": 8.0, "name": "Simple Extrude"}
-        self._safe_call(
-            operations,
-            "extrude",
-            extrude_args,
-            lambda: {"feature_id": runtime.extrude(**extrude_args)},
-        )
-
-        return operations
 
     def _build_mounting_bracket(self, runtime: ToolRuntime) -> list[OperationExecution]:
         operations: list[OperationExecution] = []
@@ -213,61 +182,3 @@ class OpenCadPlanner:
         )
 
         return operations
-
-    def generate_code(self, message: str) -> str:
-        lowered = message.lower()
-        if "mounting bracket" in lowered:
-            return (
-                '"""Mounting bracket with fastener holes and center cutout."""\n'
-                "from opencad import Part, Sketch\n\n"
-                'plate = Part(name="Plate").extrude(\n'
-                '    Sketch(name="Plate Outline").rect(80, 30),\n'
-                '    depth=4, name="Plate Body",\n'
-                ")\n"
-                'h1 = Part(name="Hole TL").extrude(Sketch(name="HTL").circle(3, center=(8, 22)), depth=4, name="HTL Body")\n'
-                'h2 = Part(name="Hole TR").extrude(Sketch(name="HTR").circle(3, center=(72, 22)), depth=4, name="HTR Body")\n'
-                'h3 = Part(name="Hole BL").extrude(Sketch(name="HBL").circle(3, center=(8, 8)), depth=4, name="HBL Body")\n'
-                'h4 = Part(name="Hole BR").extrude(Sketch(name="HBR").circle(3, center=(72, 8)), depth=4, name="HBR Body")\n'
-                'center = Part(name="Center").extrude(Sketch(name="C").circle(5, center=(40, 15)), depth=4, name="C Body")\n'
-                "bracket = plate.cut(h1).cut(h2).cut(h3).cut(h4).cut(center)\n"
-            )
-
-        if "pcb" in lowered or "carrier" in lowered:
-            return (
-                '"""PCB carrier plate with mounting holes and cable passthrough."""\n'
-                "from opencad import Part, Sketch\n\n"
-                # Outer plate: 90x60, 3mm thick
-                'plate = Part(name="Carrier Plate").extrude(\n'
-                '    Sketch(name="Carrier Outline").rect(90, 60),\n'
-                '    depth=3, name="Carrier Plate Body",\n'
-                ")\n\n"
-                # Four 2.2mm mounting holes at corners (4.4mm dia)\n'
-                'm1 = Part(name="Mount BL").extrude(Sketch(name="MBL").circle(2.2, center=(8, 8)), depth=3, name="MBL Body")\n'
-                'm2 = Part(name="Mount BR").extrude(Sketch(name="MBR").circle(2.2, center=(82, 8)), depth=3, name="MBR Body")\n'
-                'm3 = Part(name="Mount TL").extrude(Sketch(name="MTL").circle(2.2, center=(8, 52)), depth=3, name="MTL Body")\n'
-                'm4 = Part(name="Mount TR").extrude(Sketch(name="MTR").circle(2.2, center=(82, 52)), depth=3, name="MTR Body")\n\n'
-                # Center 7mm cable passthrough (14mm dia)\n'
-                'passthrough = Part(name="Cable Passthrough").extrude(\n'
-                '    Sketch(name="Passthrough Profile").circle(7, center=(45, 30)),\n'
-                '    depth=3, name="Passthrough Body",\n'
-                ")\n\n"
-                # Cut all holes, then offset for reinforcement\n'
-                "carrier = (\n"
-                '    plate.cut(m1, name="Cut Mount BL")\n'
-                '         .cut(m2, name="Cut Mount BR")\n'
-                '         .cut(m3, name="Cut Mount TL")\n'
-                '         .cut(m4, name="Cut Mount TR")\n'
-                '         .cut(passthrough, name="Cut Passthrough")\n'
-                '         .offset(0.4, name="Carrier Reinforcement")\n'
-                ")\n"
-            )
-
-        return (
-            '"""Smoke test: rectangle with circular hole."""\n'
-            "from opencad import Part, Sketch\n\n"
-            'rect_profile = Sketch(name="Outer").rect(30, 20)\n'
-            'hole_profile = Sketch(name="Hole").circle(4, center=(15, 10))\n\n'
-            'slab = Part(name="Slab").extrude(rect_profile, depth=8, name="Slab Body")\n'
-            'hole = Part(name="Hole").extrude(hole_profile, depth=8, name="Hole Body")\n'
-            'final = slab.cut(hole, name="Final Part")\n'
-        )

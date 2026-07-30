@@ -230,13 +230,14 @@ class OpenCadKernel:
 
     def _run_boolean(self, op_name: BooleanOp, shape_a: ShapeData, shape_b: ShapeData) -> OperationResult:
         bbox_overlap = overlap_volume(shape_a.bbox, shape_b.bbox)
+        estimated_overlap = min(bbox_overlap, shape_a.volume, shape_b.volume)
 
         if op_name == "boolean_union":
-            result_volume = max(self.tolerance, shape_a.volume + shape_b.volume - bbox_overlap)
+            result_volume = shape_a.volume + shape_b.volume - estimated_overlap
             result_bbox = union_bbox(shape_a.bbox, shape_b.bbox)
 
         elif op_name == "boolean_cut":
-            result_volume = shape_a.volume - bbox_overlap
+            result_volume = shape_a.volume - estimated_overlap
             if result_volume <= self.tolerance:
                 return make_failure(
                     code=ErrorCode.ZERO_VOLUME,
@@ -247,7 +248,7 @@ class OpenCadKernel:
             result_bbox = shape_a.bbox
 
         else:  # boolean_intersection
-            result_volume = bbox_overlap
+            result_volume = estimated_overlap
             if result_volume <= self.tolerance:
                 return make_failure(
                     code=ErrorCode.BBOX_NEAR_TANGENT,

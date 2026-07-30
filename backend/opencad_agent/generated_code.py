@@ -69,6 +69,7 @@ def validate_generated_code(code: str) -> ast.Module:
 
     for node in ast.walk(tree):
         _validate_node(node)
+    _validate_sketch_profiles(tree)
     return tree
 
 
@@ -126,6 +127,16 @@ def _validate_call(node: ast.Call) -> None:
     root_name = _attribute_root_name(node.func)
     if root_name in BLOCKED_MODULE_NAMES:
         raise GeneratedCodePolicyError(f"Generated code cannot call APIs on {root_name!r}.")
+    if call_name == "circle":
+        for keyword in node.keywords:
+            if (
+                keyword.arg == "subtract"
+                and isinstance(keyword.value, ast.Constant)
+                and keyword.value.value is True
+            ):
+                raise GeneratedCodePolicyError(
+                    "Generated sketches cannot use subtract=True; create a separate solid and use Part.cut()."
+                )
 
 
 def _call_name(node: ast.AST) -> str | None:
@@ -145,6 +156,59 @@ def _attribute_root_name(node: ast.AST) -> str | None:
     if isinstance(current, ast.Name):
         return current.id
     return None
+
+
+def _validate_sketch_profiles(tree: ast.Module) -> None:
+    """Reject sketch call sequences that the live kernel cannot form into one wire."""
+    sketch_calls: dict[str, list[str]] = {}
+
+    for statement in tree.body:
+        value: ast.AST | None = None
+        assigned_name: str | None = None
+        if isinstance(statement, ast.Assign) and len(statement.targets) == 1:
+            target = statement.targets[0]
+            if isinstance(target, ast.Name):
+                assigned_name = target.id
+                value = statement.value
+        elif isinstance(statement, ast.Expr):
+            value = statement.value
+
+        if value is None:
+            continue
+
+        root_name = _attribute_root_name(value)
+        calls = [
+            call_name
+            for call in ast.walk(value)
+            if isinstance(call, ast.Call)
+            and (call_name := _call_name(call.func)) in {"arc", "circle", "line", "rect"}
+        ]
+
+        if assigned_name is not None and _contains_constructor(value, "Sketch"):
+            sketch_calls[assigned_name] = calls
+            _check_sketch_call_sequence(calls)
+            continue
+
+        if root_name in sketch_calls and calls:
+            sketch_calls[root_name].extend(calls)
+            _check_sketch_call_sequence(sketch_calls[root_name])
+
+
+def _contains_constructor(node: ast.AST, constructor_name: str) -> bool:
+    return any(
+        isinstance(item, ast.Call)
+        and isinstance(item.func, ast.Name)
+        and item.func.id == constructor_name
+        for item in ast.walk(node)
+    )
+
+
+def _check_sketch_call_sequence(calls: list[str]) -> None:
+    closed_profiles = [name for name in calls if name in {"circle", "rect"}]
+    if len(closed_profiles) > 1 or (closed_profiles and any(name in {"arc", "line"} for name in calls)):
+        raise GeneratedCodePolicyError(
+            "Each Sketch must contain exactly one connected profile; use separate sketches and Part booleans."
+        )
 
 
 def _execution_namespace() -> dict[str, Any]:

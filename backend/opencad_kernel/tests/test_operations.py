@@ -88,6 +88,23 @@ def test_boolean_union_success(kernel: OpenCadKernel) -> None:
     assert result.shape.volume > 0.0
 
 
+def test_boolean_union_bounds_bbox_overlap_by_operand_volume(kernel: OpenCadKernel) -> None:
+    a_id, b_id = _make_two_boxes(kernel)
+    shape_a = kernel.store.get(a_id)
+    shape_b = kernel.store.get(b_id)
+    assert shape_a is not None and shape_b is not None
+    shape_a.volume = 0.2
+    shape_b.volume = 0.3
+    kernel.store.add(shape_a)
+    kernel.store.add(shape_b)
+
+    result = kernel.boolean_union(BooleanInput(shape_a_id=a_id, shape_b_id=b_id))
+
+    assert isinstance(result, Success)
+    assert result.shape is not None
+    assert result.shape.volume == pytest.approx(0.3)
+
+
 def test_boolean_union_no_overlap_fails(kernel: OpenCadKernel) -> None:
     a_id, b_id = _make_two_boxes(kernel)
     _translate_shape(kernel, b_id, dx=10.0, dy=0.0, dz=0.0)

@@ -15,6 +15,22 @@ from opencad_tree.models import FeatureTree
 logger = logging.getLogger(__name__)
 
 
+class AgentConfigurationError(RuntimeError):
+    """Raised when code generation is requested without an LLM model."""
+
+
+class LlmGenerationError(RuntimeError):
+    """Raised when the configured LLM cannot return usable code."""
+
+
+class GeneratedCodeExecutionError(RuntimeError):
+    """Raised when generated code cannot be validated or executed."""
+
+
+class GeneratedCodeValidationError(RuntimeError):
+    """Raised when generated code fails an isolated in-process dry run."""
+
+
 class OpenCadAgentService:
     def __init__(
         self,
@@ -39,6 +55,21 @@ class OpenCadAgentService:
 
         if request.generate_code:
             generated_code = self._generate_code(request)
+            try:
+                self._validate_generated_code(generated_code, request.tree_state)
+            except GeneratedCodeValidationError as exc:
+                generated_code = self._generate_code(
+                    request,
+                    user_message=(
+                        f"Correct the previous code for this request: {request.message}\n\n"
+                        f"Validation error: {exc}\n\n"
+                        f"Invalid code:\n{generated_code}\n\n"
+                        "For every Sketch variable, keep exactly one closed-profile call: one rect or one circle. "
+                        "Delete all extra closed-profile calls instead of replacing them. "
+                        "Return only corrected OpenCAD Python code."
+                    ),
+                )
+                self._validate_generated_code(generated_code, request.tree_state)
             new_tree, operations = self._run_generated_code(generated_code, request.tree_state)
             return ChatResponse(
                 response=generated_code,
@@ -80,24 +111,10 @@ class OpenCadAgentService:
         ctx._sync_counters()
         prior_nodes = set(ctx.tree.nodes.keys())
 
-        self._execute_code_in_context(code, ctx)
-
-        # try:
-        #     self._execute_code_in_context(code, ctx)
-        # except Exception as exc:
-        #     import httpx
-        #     if kernel_call_fn is not None and isinstance(exc, (httpx.ConnectTimeout, httpx.ConnectError, httpx.TimeoutException)):
-        #         # Kernel unreachable — fall back to in-process and re-run
-        #         ctx = RuntimeContext()
-        #         ctx.tree = deepcopy(tree_state)
-        #         ctx._sync_counters()
-        #         prior_nodes = set(ctx.tree.nodes.keys())
-        #         try:
-        #             self._execute_code_in_context(code, ctx)
-        #         except Exception as exc2:
-        #             raise RuntimeError(f"Generated code execution failed: {exc2}") from exc2
-        #     else:
-        #         raise RuntimeError(f"Generated code execution failed: {exc}") from exc
+        try:
+            self._execute_code_in_context(code, ctx)
+        except Exception as exc:
+            raise GeneratedCodeExecutionError(f"Generated code execution failed: {exc}") from exc
 
         operations: list[OperationExecution] = []
         for node_id, node in ctx.tree.nodes.items():
@@ -113,6 +130,18 @@ class OpenCadAgentService:
 
         return ctx.tree, operations
 
+    def _validate_generated_code(self, code: str, tree_state: FeatureTree) -> None:
+        """Dry-run generated code against an isolated analytic kernel before live execution."""
+        from opencad.runtime import RuntimeContext
+
+        validation_ctx = RuntimeContext()
+        validation_ctx.tree = deepcopy(tree_state)
+        validation_ctx._sync_counters()
+        try:
+            self._execute_code_in_context(code, validation_ctx)
+        except Exception as exc:
+            raise GeneratedCodeValidationError(f"Generated code validation failed: {exc}") from exc
+
     @staticmethod
     def _execute_code_in_context(code: str, ctx: object) -> None:
         from opencad.runtime import reset_default_context, set_default_context
@@ -123,15 +152,23 @@ class OpenCadAgentService:
         finally:
             reset_default_context()
 
-    def _generate_code(self, request: ChatRequest) -> str:
-        model = os.environ.get("OPENCAD_LLM_MODEL")
+    def _generate_code(self, request: ChatRequest, *, user_message: str | None = None) -> str:
+        provider = request.llm_provider or os.environ.get("OPENCAD_LLM_PROVIDER")
+        model = request.llm_model or os.environ.get("OPENCAD_LLM_MODEL")
 
-        if model:
+        if not model:
+            raise AgentConfigurationError(
+                "Generate Code requires an LLM. Set OPENCAD_LLM_MODEL and, when needed, OPENCAD_LLM_PROVIDER."
+            )
+
+        try:
             return self.llm_client.generate_code(
+                provider=provider,
                 model=model,
                 system_prompt=build_code_generation_prompt(request.tree_state),
-                user_message=request.message,
+                user_message=user_message or request.message,
                 conversation_history=request.conversation_history,
                 reasoning=request.reasoning,
             )
-        return self.planner.generate_code(request.message)
+        except Exception as exc:
+            raise LlmGenerationError(f"LLM code generation failed: {exc}") from exc

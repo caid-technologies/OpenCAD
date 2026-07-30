@@ -56,8 +56,18 @@ export class OpenCadApiClient {
       };
     }
 
-    const response = await axios.post<ChatResponsePayload>(`${this.baseUrl}/agent/chat`, request);
-    return response.data;
+    try {
+      const response = await axios.post<ChatResponsePayload>(`${this.baseUrl}/agent/chat`, request);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const detail = error.response?.data?.detail;
+        if (typeof detail === "string") {
+          throw new Error(detail);
+        }
+      }
+      throw error;
+    }
   }
 
   async getTree(treeId: string): Promise<FeatureTreeView> {
