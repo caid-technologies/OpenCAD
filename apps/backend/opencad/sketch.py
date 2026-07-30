@@ -70,7 +70,7 @@ class Sketch:
         subtract: bool = False,
     ) -> Self:
         entity_id = self._new_entity_id("circle")
-        segment = SketchSegment(type="circle", center=center, radius=radius)
+        segment = SketchSegment(type="circle", center=center, radius=radius, subtract=subtract)
         self._segments.append(segment)
         self._entities[entity_id] = {
             "id": entity_id,

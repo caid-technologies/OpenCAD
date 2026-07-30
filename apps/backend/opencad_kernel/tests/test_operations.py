@@ -234,15 +234,14 @@ def test_import_step_missing_file_fails(kernel: OpenCadKernel, tmp_path) -> None
     assert result.code == ErrorCode.IO_ERROR
 
 
-def test_export_step_success(kernel: OpenCadKernel, tmp_path) -> None:
+def test_analytic_export_step_is_rejected(kernel: OpenCadKernel, tmp_path) -> None:
     sphere = kernel.create_sphere(CreateSphereInput(radius=2.0))
     assert isinstance(sphere, Success) and sphere.shape_id
     out_path = tmp_path / "out.step"
     result = kernel.export_step(ExportStepInput(shape_id=sphere.shape_id, filepath=str(out_path)))
-    assert isinstance(result, Success)
-    assert out_path.exists()
-    text = out_path.read_text(encoding="utf-8")
-    assert text.startswith("OPENCAD-MOCK")
+    assert isinstance(result, Failure)
+    assert result.code == ErrorCode.UNSUPPORTED_STEP
+    assert not out_path.exists()
 
 
 def test_export_step_missing_shape_fails(kernel: OpenCadKernel, tmp_path) -> None:

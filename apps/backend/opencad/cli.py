@@ -5,6 +5,16 @@ import runpy
 from pathlib import Path
 
 from opencad.runtime import RuntimeContext, get_default_context, set_default_context
+from opencad_kernel.core.backend_factory import create_backend
+
+
+def _add_backend_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--backend",
+        default="auto",
+        choices=["auto", "occt", "analytic"],
+        help="Geometry backend (auto prefers OCCT; STEP export requires OCCT)",
+    )
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -21,6 +31,7 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=["readable", "uuid"],
         help="Shape ID strategy for rebuild-created shapes",
     )
+    _add_backend_argument(build_parser)
     build_parser.set_defaults(func=_cmd_build)
 
     run_parser = subparsers.add_parser("run", help="Run a Python script with the opencad fluent API")
@@ -33,13 +44,15 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=["readable", "uuid"],
         help="Shape ID strategy for script execution",
     )
+    _add_backend_argument(run_parser)
     run_parser.set_defaults(func=_cmd_run)
 
     return parser
 
 
 def _cmd_build(args: argparse.Namespace) -> int:
-    context = RuntimeContext(id_strategy=args.id_strategy)
+    backend = create_backend(args.backend, id_strategy=args.id_strategy)
+    context = RuntimeContext(id_strategy=args.id_strategy, backend=backend)
     context.load_tree_json(args.model)
     tree = context.rebuild_tree(continue_on_error=args.continue_on_error)
 
@@ -54,7 +67,12 @@ def _cmd_build(args: argparse.Namespace) -> int:
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
-    context = RuntimeContext(id_strategy=args.id_strategy)
+    backend = create_backend(
+        args.backend,
+        id_strategy=args.id_strategy,
+        require_native=bool(args.export),
+    )
+    context = RuntimeContext(id_strategy=args.id_strategy, backend=backend)
     set_default_context(context)
 
     script_path = Path(args.script)

@@ -2,20 +2,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from opencad import Part, Sketch, get_default_context, reset_default_context
 
 
-def test_fluent_sketch_extrude_fillet_export(tmp_path: Path) -> None:
+def test_fluent_sketch_extrude_fillet_rejects_analytic_step_export(tmp_path: Path) -> None:
     reset_default_context()
 
     sketch = Sketch().rect(10, 20).circle(3, subtract=True)
     part = Part().extrude(sketch, depth=5).fillet(edges="top", radius=0.5)
 
     output = tmp_path / "output.step"
-    part.export(str(output))
+    with pytest.raises(RuntimeError, match="analytic backend cannot export STEP"):
+        part.export(str(output))
 
     ctx = get_default_context()
-    assert output.exists()
+    assert not output.exists()
     assert part.shape_id is not None
     assert sketch.feature_id is not None
     assert len(ctx.tree.nodes) >= 3  # root + sketch + feature chain

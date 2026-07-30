@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 
@@ -10,6 +11,10 @@ from opencad.cli import main
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 EXAMPLES_DIR = REPO_ROOT / "examples"
+HAS_OCCT = (
+    importlib.util.find_spec("cadquery") is not None
+    and importlib.util.find_spec("OCP") is not None
+)
 
 
 @pytest.mark.parametrize(
@@ -46,17 +51,22 @@ def test_examples_run_export_and_tree(tmp_path: Path, script_name: str, expected
     step_path = tmp_path / f"{Path(script_name).stem}.step"
     tree_path = tmp_path / f"{Path(script_name).stem}.json"
 
-    code = main([
+    arguments = [
         "run",
         str(EXAMPLES_DIR / script_name),
-        "--export",
-        str(step_path),
         "--tree-output",
         str(tree_path),
-    ])
+    ]
+    if HAS_OCCT:
+        arguments.extend(["--export", str(step_path)])
+    else:
+        arguments.extend(["--backend", "analytic"])
+
+    code = main(arguments)
 
     assert code == 0
-    assert step_path.exists()
+    if HAS_OCCT:
+        assert step_path.read_text(encoding="utf-8").startswith("ISO-10303-21;")
     assert tree_path.exists()
 
     tree = json.loads(tree_path.read_text(encoding="utf-8"))
