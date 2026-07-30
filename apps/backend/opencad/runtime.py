@@ -4,13 +4,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 from opencad_kernel.core.backend import KernelBackend
+from opencad_kernel.core.models import TopologyMap
+from opencad_kernel.core.topology import select as select_topology
 from opencad_kernel.operations.handlers import OpenCadKernel
 from opencad_kernel.operations.registry import OperationRegistry
+from opencad_kernel.operations.schemas import SelectorQuery
 from opencad.kernel_adapter import execute_feature_node, registry_result_to_dict
 from opencad_tree.models import FeatureNode, FeatureTree
 from opencad_tree.service import FeatureTreeService
 
 KernelCallFn = Callable[[str, dict[str, Any]], dict[str, Any]]
+KernelTopologyFn = Callable[[str], dict[str, Any]]
 
 if TYPE_CHECKING:
     from opencad.design_artifact import DesignArtifact
@@ -24,9 +28,11 @@ class RuntimeContext:
         *,
         id_strategy: str = "readable",
         kernel_call_fn: KernelCallFn | None = None,
+        kernel_topology_fn: KernelTopologyFn | None = None,
         backend: KernelBackend | None = None,
     ) -> None:
         self._external_kernel_call = kernel_call_fn
+        self._external_kernel_topology = kernel_topology_fn
         self.kernel = OpenCadKernel(id_strategy=id_strategy, backend=backend)
         self.registry = OperationRegistry(self.kernel)
         self.tree = FeatureTree(root_id="root")
@@ -128,12 +134,28 @@ class RuntimeContext:
         """HTTP-compatible kernel call adapter for in-process agent runtimes."""
         return registry_result_to_dict(self.registry, operation, payload)
 
+    def get_topology(self, shape_id: str) -> TopologyMap:
+        """Read topology from the same backend that owns the shape."""
+        if self._external_kernel_call is None:
+            return self.kernel.get_topology(shape_id)
+        if self._external_kernel_topology is None:
+            raise RuntimeError("Live-kernel topology access is not configured.")
+        return TopologyMap.model_validate(self._external_kernel_topology(shape_id))
+
+    def select_subshapes(self, shape_id: str, query: SelectorQuery) -> list[Any]:
+        topology = self.get_topology(shape_id)
+        return select_topology(topology.faces + topology.edges, query)
+
     def chat(self, message: str) -> tuple[str, list[dict[str, Any]]]:
         """Run the LLM-backed agent in-process and merge resulting tree state."""
         from opencad_agent.models import ChatRequest
         from opencad_agent.service import OpenCadAgentService
 
-        service = OpenCadAgentService(kernel_call=self.kernel_call, live_kernel=True)
+        service = OpenCadAgentService(
+            kernel_call=self.kernel_call,
+            kernel_topology_call=lambda shape_id: self.kernel.get_topology(shape_id).model_dump(),
+            live_kernel=True,
+        )
         response = service.chat(
             ChatRequest(
                 message=message,

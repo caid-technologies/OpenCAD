@@ -14,6 +14,7 @@ _KERNEL_URL = os.environ.get("OPENCAD_KERNEL_URL", "http://127.0.0.1:8000")
 _USE_LIVE_KERNEL = os.environ.get("OPENCAD_AGENT_LIVE_KERNEL", "false").lower() == "true"
 
 KernelCall = Callable[[str, dict[str, Any]], dict[str, Any]]
+KernelTopologyCall = Callable[[str], dict[str, Any]]
 
 
 def _kernel_operation_url(operation: str) -> str:
@@ -29,6 +30,18 @@ def _call_kernel(operation: str, params: dict[str, Any]) -> dict[str, Any]:
 
     url = _kernel_operation_url(operation)
     response = httpx.post(url, json={"payload": params}, timeout=30.0)
+    response.raise_for_status()
+    return response.json()
+
+
+def _call_kernel_topology(shape_id: str) -> dict[str, Any]:
+    """Fetch topology from the live kernel that owns ``shape_id``."""
+    import httpx
+
+    base_url = _KERNEL_URL.rstrip("/")
+    if not base_url.endswith("/kernel"):
+        base_url = f"{base_url}/kernel"
+    response = httpx.get(f"{base_url}/shapes/{shape_id}/topology", timeout=30.0)
     response.raise_for_status()
     return response.json()
 

@@ -215,6 +215,46 @@ def test_tool_runtime_supports_in_process_kernel_calls() -> None:
     assert shape_id.startswith("extrude-") or shape_id.startswith("box-")
 
 
+def test_live_kernel_fillet_resolves_topology_from_shape_owner() -> None:
+    generated_code = (
+        "from opencad import Part, Sketch\n"
+        "base = Part(name='Base').box(10, 10, 4)\n"
+        "hole = Part(name='Hole').cylinder(2, 4)\n"
+        "result = base.cut(hole).fillet(edges='all', radius=0.5)\n"
+    )
+    kernel = OpenCadKernel(id_strategy="uuid")
+    registry = OperationRegistry(kernel)
+
+    def kernel_call(operation: str, payload: dict[str, object]) -> dict[str, object]:
+        return registry.call(operation, payload).model_dump()
+
+    service = OpenCadAgentService(
+        kernel_call=kernel_call,
+        kernel_topology_call=lambda shape_id: kernel.get_topology(shape_id).model_dump(),
+        live_kernel=True,
+        llm_client=LiteLlmProvider(
+            completion_func=lambda **_: {
+                "choices": [{"message": {"content": generated_code}}]
+            }
+        ),
+    )
+
+    response = service.chat(
+        ChatRequest(
+            message="Build and fillet a drilled block",
+            tree_state=_seed_tree(),
+            llm_model="test-model",
+        )
+    )
+
+    assert [operation.tool for operation in response.operations_executed] == [
+        "create_box",
+        "create_cylinder",
+        "boolean_cut",
+        "fillet_edges",
+    ]
+
+
 def test_service_can_generate_code_with_litellm_provider() -> None:
     captured: dict[str, object] = {}
     expected_code = """from opencad import Part, Sketch

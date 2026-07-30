@@ -146,7 +146,7 @@ class Part:
         if isinstance(edge_spec, list):
             return edge_spec
 
-        topology = self._context.kernel.get_topology(shape_id)
+        topology = self._context.get_topology(shape_id)
         if edge_spec in (None, "all"):
             return [edge.id for edge in topology.edges]
         if edge_spec == "top":
@@ -299,7 +299,7 @@ class Part:
     def select_faces(self, *, tags: list[str] | None = None, limit: int | None = None) -> list[str]:
         _, shape_id = self._require_shape()
         query = SelectorQuery(kind="face", tags=tags, limit=limit)
-        refs = self._context.kernel.select_subshapes(shape_id, query)
+        refs = self._context.select_subshapes(shape_id, query)
         return [ref.id for ref in refs]
 
     def export(self, filepath: str) -> Self:
