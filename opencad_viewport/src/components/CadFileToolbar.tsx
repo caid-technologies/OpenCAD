@@ -52,7 +52,12 @@ export function CadFileToolbar({ canExport, onImport, onExport }: CadFileToolbar
           if (file) void runImport(file);
         }}
       />
-      <button type="button" disabled={busy !== null} onClick={() => inputRef.current?.click()}>
+      <button
+        className="cad-import-button"
+        type="button"
+        disabled={busy !== null}
+        onClick={() => inputRef.current?.click()}
+      >
         {busy === "import" ? "Importing…" : "Import CAD"}
       </button>
       <select

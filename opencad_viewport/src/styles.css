@@ -149,6 +149,10 @@ body {
   display: none;
 }
 
+.cad-import-button {
+  display: none;
+}
+
 .cad-file-toolbar button,
 .cad-file-toolbar select {
   min-height: 30px;
