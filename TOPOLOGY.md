@@ -185,7 +185,7 @@ index) but will not survive:
 
 Any Phase 2 proposal must integrate with:
 
-- **Kernel backend protocol** (`opencad_kernel/core/backend.py`) — topology
+- **Kernel backend protocol** (`apps/backend/opencad_kernel/core/backend.py`) — topology
   identity must work across analytic and OCCT backends.
 - **Operation registry** (`opencad_kernel/operations/registry.py`) — every
   registered operation must participate in the identity protocol.

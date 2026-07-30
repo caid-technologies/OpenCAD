@@ -8,7 +8,7 @@ import pytest
 from opencad.cli import main
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 EXAMPLES_DIR = REPO_ROOT / "examples"
 
 

@@ -83,7 +83,7 @@ pytest
 ## 4 – Viewport Validation (manual)
 
 ```bash
-cd opencad_viewport
+cd apps/opencad_viewport
 npm install
 npm run dev
 ```

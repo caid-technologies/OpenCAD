@@ -2,7 +2,7 @@
 
 ## 0.1.1 - 2026-04-24
 
-- Fixed Python package discovery for the `backend/` source layout.
+- Fixed Python package discovery for the `apps/backend/` source layout.
 - Added the missing `python-dotenv` runtime dependency.
 - Corrected the OCCT optional dependency to use `cadquery-ocp`.
 - Added a lightweight `server` extra for uv-based local service startup.

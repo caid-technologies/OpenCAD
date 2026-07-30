@@ -6,7 +6,7 @@ Use uv for Python and pnpm for the viewport.
 
 ```bash
 uv sync --extra test --extra server
-cd opencad_viewport
+cd apps/opencad_viewport
 pnpm install
 ```
 
@@ -16,7 +16,7 @@ Run these before proposing changes:
 
 ```bash
 uv run --no-sync python -m pytest
-cd opencad_viewport
+cd apps/opencad_viewport
 pnpm test
 pnpm build
 ```

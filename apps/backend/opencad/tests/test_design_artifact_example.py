@@ -7,7 +7,7 @@ from opencad import load_design_artifact
 
 
 def test_simcorrect_forearm_example_writes_artifact(tmp_path: Path, monkeypatch) -> None:
-    repo_root = Path(__file__).resolve().parents[3]
+    repo_root = Path(__file__).resolve().parents[4]
     monkeypatch.chdir(tmp_path)
 
     runpy.run_path(str(repo_root / "examples" / "simcorrect_forearm_design.py"), run_name="__main__")

@@ -19,7 +19,7 @@ from opencad_kernel.operations.handlers import OpenCadKernel
 from opencad_kernel.operations.registry import OperationRegistry
 from opencad_tree.models import FeatureNode, FeatureTree
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[4]
 
 
 def _seed_tree() -> FeatureTree:

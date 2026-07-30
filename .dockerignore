@@ -8,14 +8,14 @@ __pycache__
 *.py[cod]
 *.egg-info
 
-backend/.env
-backend/__pycache__
-backend/**/*.py[cod]
-backend/**/__pycache__
+apps/backend/.env
+apps/backend/__pycache__
+apps/backend/**/*.py[cod]
+apps/backend/**/__pycache__
 
-opencad_viewport/.env
-opencad_viewport/node_modules
-opencad_viewport/dist
-opencad_viewport/tsconfig.tsbuildinfo
+apps/opencad_viewport/.env
+apps/opencad_viewport/node_modules
+apps/opencad_viewport/dist
+apps/opencad_viewport/tsconfig.tsbuildinfo
 
 *.log

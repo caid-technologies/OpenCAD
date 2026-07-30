@@ -17,9 +17,9 @@ opencad --help
 
 The package layout is now aligned with the actual repository structure:
 
-- Python packages live under `backend/`.
-- Pytest uses `backend` as its import root.
-- The editable install maps package discovery to `backend`.
+- Python packages live under `apps/backend/`.
+- Pytest uses `apps/backend` as its import root.
+- The editable install maps package discovery to `apps/backend`.
 - `python-dotenv` is declared because the API modules import it directly.
 - The OCCT extra now depends on `cadquery-ocp`, which is the package that provides the `OCP` import.
 - The service modules expose standalone `FastAPI` apps while still exporting routers for the aggregate backend.
@@ -29,7 +29,7 @@ Verification:
 
 ```powershell
 uv run --no-sync python -m pytest
-cd opencad_viewport
+cd apps/opencad_viewport
 pnpm install
 pnpm test
 pnpm build
@@ -56,7 +56,7 @@ OpenCAD is a modular CAD platform with five main pieces:
 - `opencad_agent` is the planning/chat layer. It can plan tool calls, execute operations, and optionally generate Python scripts through LiteLLM.
 - `opencad_viewport` is the React/Three.js frontend. It can run in mock mode or target the backend APIs.
 
-The aggregate backend at `backend/api.py` mounts the kernel, solver, tree, and agent routers under separate prefixes. The individual service APIs can also run independently.
+The aggregate backend at `apps/backend/api.py` mounts the kernel, solver, tree, and agent routers under separate prefixes. The individual service APIs can also run independently.
 
 ## What Is Good
 
@@ -100,7 +100,7 @@ Mock STEP export in the analytic backend writes `OPENCAD-MOCK` data, not real ne
 
 There are multiple identities for the same system: standalone services, aggregate API, fluent Python API, operation registry, frontend mocks, and SimCorrect's shim. Without one canonical contract, integrations will keep drifting.
 
-The local README has some stale or misleading path examples. The real backend package is under `backend/`, the frontend is `opencad_viewport/`, and the working service entry points are package-qualified modules rather than a generic `backend/api.py` import from inside `/backend`.
+The backend package is under `apps/backend/`, the frontend is under `apps/opencad_viewport/`, and the working service entry points are package-qualified modules rather than a generic API module import from an unrelated working directory.
 
 ## Upgrade Direction
 

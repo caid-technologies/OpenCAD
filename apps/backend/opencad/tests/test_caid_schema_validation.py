@@ -49,7 +49,7 @@ def test_schema_version_is_const_in_generated_schemas() -> None:
 
 
 def test_committed_json_schemas_expose_required_contract_keys() -> None:
-    repo_root = Path(__file__).resolve().parents[3]
+    repo_root = Path(__file__).resolve().parents[4]
     artifact_schema = json.loads(
         (repo_root / "docs" / "schemas" / "caid-design-artifact-v1.schema.json").read_text(encoding="utf-8")
     )

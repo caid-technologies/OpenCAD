@@ -46,22 +46,22 @@ full = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["backend"]
+pythonpath = ["apps/backend"]
 testpaths = [
-  "backend/opencad/tests",
-  "backend/opencad_kernel/tests",
-  "backend/opencad_solver/tests",
-  "backend/opencad_tree/tests",
-  "backend/opencad_agent/tests",
-  "backend/tests",
+  "apps/backend/opencad/tests",
+  "apps/backend/opencad_kernel/tests",
+  "apps/backend/opencad_solver/tests",
+  "apps/backend/opencad_tree/tests",
+  "apps/backend/opencad_agent/tests",
+  "apps/backend/tests",
 ]
 addopts = "-q"
 
 [tool.setuptools]
-package-dir = {"" = "backend"}
+package-dir = {"" = "apps/backend"}
 
 [tool.setuptools.packages.find]
-where = ["backend"]
+where = ["apps/backend"]
 namespaces = false
 include = [
   "opencad*",
