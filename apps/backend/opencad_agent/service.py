@@ -8,7 +8,7 @@ from opencad_agent.generated_code import execute_generated_code
 from opencad_agent.llm import LiteLlmProvider
 from opencad_agent.models import ChatRequest, ChatResponse, OperationExecution
 from opencad_agent.prompting import build_code_generation_prompt
-from opencad_agent.tools import KernelCall, _call_kernel
+from opencad_agent.tools import KernelCall, KernelTopologyCall, _call_kernel, _call_kernel_topology
 from opencad_tree.models import FeatureTree
 
 logger = logging.getLogger(__name__)
@@ -35,10 +35,12 @@ class OpenCadAgentService:
         self,
         *,
         kernel_call: KernelCall | None = None,
+        kernel_topology_call: KernelTopologyCall | None = None,
         live_kernel: bool | None = None,
         llm_client: LiteLlmProvider | None = None,
     ) -> None:
         self.kernel_call = kernel_call
+        self.kernel_topology_call = kernel_topology_call
         self.live_kernel = live_kernel
         self.llm_client = llm_client or LiteLlmProvider()
 
@@ -53,6 +55,10 @@ class OpenCadAgentService:
                     f"Correct the previous code for this request: {request.message}\n\n"
                     f"Validation error: {exc}\n\n"
                     f"Invalid code:\n{generated_code}\n\n"
+                    "Fix the exact validation error before returning code. "
+                    "Every boolean union, cut, or intersection must use solids whose bounding boxes overlap. "
+                    "Native primitives start at the world origin and OpenCAD has no translation method, so use overlapping dimensions at the origin. "
+                    "For a screw, use an overlapping narrow cylinder for the shank and a wider short cylinder for the head. "
                     "For every Sketch variable, keep exactly one closed-profile call: one rect or one circle. "
                     "Delete all extra closed-profile calls instead of replacing them. "
                     "Return only corrected OpenCAD Python code."
@@ -82,8 +88,14 @@ class OpenCadAgentService:
             else (os.environ.get("OPENCAD_AGENT_LIVE_KERNEL", "false").lower() == "true" or self.kernel_call is not None)
         )
         kernel_call_fn = (self.kernel_call or _call_kernel) if _use_live else None
+        kernel_topology_fn = (
+            self.kernel_topology_call or _call_kernel_topology
+        ) if _use_live else None
 
-        ctx = RuntimeContext(kernel_call_fn=kernel_call_fn)
+        ctx = RuntimeContext(
+            kernel_call_fn=kernel_call_fn,
+            kernel_topology_fn=kernel_topology_fn,
+        )
         ctx.tree = deepcopy(tree_state)
         ctx._sync_counters()
         prior_nodes = set(ctx.tree.nodes.keys())
@@ -146,5 +158,12 @@ class OpenCadAgentService:
                 user_message=user_message or request.message,
                 conversation_history=request.conversation_history,
             )
+        except ModuleNotFoundError as exc:
+            if exc.name == "litellm":
+                raise AgentConfigurationError(
+                    "Chat requires the LiteLLM dependency. "
+                    "Install it with: uv sync --extra llm"
+                ) from exc
+            raise LlmGenerationError(f"LLM code generation failed: {exc}") from exc
         except Exception as exc:
             raise LlmGenerationError(f"LLM code generation failed: {exc}") from exc

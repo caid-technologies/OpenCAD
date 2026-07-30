@@ -5,7 +5,7 @@
 Use uv for Python and pnpm for the viewport.
 
 ```bash
-uv sync --extra test --extra server
+uv sync --extra test --extra server --extra occt
 cd apps/opencad_viewport
 pnpm install
 ```

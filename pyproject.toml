@@ -26,6 +26,7 @@ test = [
 ]
 server = [
   "uvicorn>=0.30",
+  "litellm>=1.82.1",
 ]
 llm = [
   "litellm>=1.82.1",

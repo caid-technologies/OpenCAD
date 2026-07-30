@@ -33,9 +33,7 @@ def build_system_prompt(tree_state: FeatureTree) -> str:
 def _load_example_scripts() -> str:
     examples_dir = Path(__file__).resolve().parents[3] / "examples"
     example_files = [
-        "hardware_mounting_bracket.py",
-        "hardware_pcb_carrier.py",
-        "software_hmi_panel.py",
+        "full_device_cable_grommet.py",
     ]
     snippets: list[str] = []
     for filename in example_files:
@@ -98,6 +96,22 @@ result = combined.cut(opening, name="Finished Part")
 """
 
 
+_SCREW_EXAMPLE = """\
+Valid screw composition example:
+```python
+from opencad import Part, Sketch
+
+shank = Part(name="Screw Shank").cylinder(radius=3, height=30, name="Shank")
+head = Part(name="Screw Head").cylinder(radius=7, height=5, name="Head")
+result = shank.union(head, name="Screw Body").fillet(
+    edges="all",
+    radius=0.5,
+    name="Edge Relief",
+)
+```
+"""
+
+
 def build_code_generation_prompt(tree_state: FeatureTree) -> str:
     base_prompt = build_system_prompt(tree_state)
     examples = _load_example_scripts()
@@ -115,6 +129,8 @@ def build_code_generation_prompt(tree_state: FeatureTree) -> str:
         "- Constructors are keyword-only: always write `Part(name=...)` and pass only named arguments to `Sketch(...)`.\n"
         "- Prefer `Sketch(name=...)`; if origin is supplied it must be a 3-number tuple, while rect origin and circle center use 2-number tuples.\n"
         "- Create each independent solid from its own Part instance; do not call an operation on a Part that has no shape.\n"
+        "- Every union, cut, or intersection requires operands whose bounding boxes overlap. Never boolean disconnected solids.\n"
+        "- Native primitives begin at the world origin and there is no translation method; choose dimensions that overlap there.\n"
         "- Use the native box, cylinder, sphere, cone, or torus Part method whenever that primitive is requested; do not approximate it with a sketch and extrusion.\n"
         "- A torus must use `Part(name=...).torus(major_radius=..., minor_radius=..., name=...)`.\n"
         "- For radial repetition, sketch one feature away from the axis, extrude it, then use circular_pattern and union it with the core.\n"
@@ -126,6 +142,7 @@ def build_code_generation_prompt(tree_state: FeatureTree) -> str:
         "API reference (use ONLY these signatures — do not invent parameters):\n"
         f"{_API_REFERENCE}\n"
         f"{_COMPOSITION_EXAMPLE}\n"
+        f"{_SCREW_EXAMPLE}\n"
         "Reference examples:\n"
         f"{examples}\n"
     )

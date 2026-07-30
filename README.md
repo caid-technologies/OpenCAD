@@ -34,14 +34,13 @@ uv pip install opencad
 For local development from this repository:
 
 ```bash
-uv sync --extra test --extra server
+uv sync --extra test --extra server --extra occt
 cp .env.example .env
 ```
 
 Install optional integrations as needed, for example:
 
 ```bash
-uv sync --extra occt
 uv sync --extra llm
 uv sync --extra full
 ```
@@ -52,7 +51,7 @@ Each service runs on its own port:
 
 ```bash
 cd apps/backend
-uv run --no-sync python -m uvicorn api:app --reload --port 8000
+uv run --extra server --extra occt python -m uvicorn api:app --reload --port 8000
 ```
 
 ### Run the dev script
@@ -70,6 +69,8 @@ This starts:
 
 - backend: `http://127.0.0.1:8000`
 - frontend: `http://127.0.0.1:5173`
+
+The launcher syncs the backend server, LLM, and OCCT dependencies before startup.
 
 Press `Ctrl+C` to stop both services.
 

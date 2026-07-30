@@ -64,6 +64,8 @@ def test_code_generation_prompt_contains_api_guidance() -> None:
     assert "from opencad import Part, Sketch" in prompt
     assert "Do not use filesystem" in prompt
     assert "Valid repeated-feature composition example" in prompt
+    assert "Valid screw composition example" in prompt
+    assert "Never boolean disconnected solids" in prompt
     assert "Each Sketch variable may call exactly one" in prompt
     for primitive in ("box", "cylinder", "sphere", "cone", "torus"):
         assert f".{primitive}(" in prompt
@@ -96,6 +98,48 @@ def test_chat_executes_native_torus_primitive() -> None:
         "major_radius": 30.0,
         "minor_radius": 10.0,
     }
+
+
+def test_validation_retry_teaches_boolean_overlap() -> None:
+    invalid_code = (
+        "from opencad import Part, Sketch\n"
+        "left = Part(name='Left').box(2, 2, 2)\n"
+        "profile = Sketch(name='Remote').rect(2, 2, origin=(10, 10))\n"
+        "right = Part(name='Right').extrude(profile, depth=2)\n"
+        "result = left.union(right)\n"
+    )
+    corrected_code = (
+        "from opencad import Part, Sketch\n"
+        "shank = Part(name='Shank').cylinder(3, 30)\n"
+        "head = Part(name='Head').cylinder(7, 5)\n"
+        "result = shank.union(head)\n"
+    )
+    user_messages: list[str] = []
+
+    def completion(**kwargs: object) -> dict[str, object]:
+        messages = kwargs["messages"]
+        assert isinstance(messages, list)
+        user_messages.append(str(messages[-1]["content"]))
+        code = invalid_code if len(user_messages) == 1 else corrected_code
+        return {"choices": [{"message": {"content": code}}]}
+
+    service = OpenCadAgentService(
+        live_kernel=False,
+        llm_client=LiteLlmProvider(completion_func=completion),
+    )
+
+    response = service.chat(
+        ChatRequest(message="Build a screw", tree_state=_seed_tree(), llm_model="test")
+    )
+
+    assert len(user_messages) == 2
+    assert "bounding boxes overlap" in user_messages[1]
+    assert "narrow cylinder for the shank" in user_messages[1]
+    assert [operation.tool for operation in response.operations_executed] == [
+        "create_cylinder",
+        "create_cylinder",
+        "boolean_union",
+    ]
 
 
 def test_chat_api_can_return_generated_code(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -215,6 +259,46 @@ def test_tool_runtime_supports_in_process_kernel_calls() -> None:
     assert shape_id.startswith("extrude-") or shape_id.startswith("box-")
 
 
+def test_live_kernel_fillet_resolves_topology_from_shape_owner() -> None:
+    generated_code = (
+        "from opencad import Part, Sketch\n"
+        "base = Part(name='Base').box(10, 10, 4)\n"
+        "hole = Part(name='Hole').cylinder(2, 4)\n"
+        "result = base.cut(hole).fillet(edges='all', radius=0.5)\n"
+    )
+    kernel = OpenCadKernel(id_strategy="uuid")
+    registry = OperationRegistry(kernel)
+
+    def kernel_call(operation: str, payload: dict[str, object]) -> dict[str, object]:
+        return registry.call(operation, payload).model_dump()
+
+    service = OpenCadAgentService(
+        kernel_call=kernel_call,
+        kernel_topology_call=lambda shape_id: kernel.get_topology(shape_id).model_dump(),
+        live_kernel=True,
+        llm_client=LiteLlmProvider(
+            completion_func=lambda **_: {
+                "choices": [{"message": {"content": generated_code}}]
+            }
+        ),
+    )
+
+    response = service.chat(
+        ChatRequest(
+            message="Build and fillet a drilled block",
+            tree_state=_seed_tree(),
+            llm_model="test-model",
+        )
+    )
+
+    assert [operation.tool for operation in response.operations_executed] == [
+        "create_box",
+        "create_cylinder",
+        "boolean_cut",
+        "fillet_edges",
+    ]
+
+
 def test_service_can_generate_code_with_litellm_provider() -> None:
     captured: dict[str, object] = {}
     expected_code = """from opencad import Part, Sketch
@@ -292,6 +376,23 @@ def test_chat_requires_configured_model(monkeypatch: pytest.MonkeyPatch) -> None
                 tree_state=_seed_tree(),
             )
         )
+
+
+def test_chat_reports_missing_litellm_as_configuration_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENCAD_LLM_MODEL", "test-model")
+
+    def missing_litellm(**_: object) -> object:
+        raise ModuleNotFoundError("No module named 'litellm'", name="litellm")
+
+    service = OpenCadAgentService(
+        live_kernel=False,
+        llm_client=LiteLlmProvider(completion_func=missing_litellm),
+    )
+
+    with pytest.raises(AgentConfigurationError, match="uv sync --extra llm"):
+        service.chat(ChatRequest(message="Build a cog", tree_state=_seed_tree()))
 
 
 def test_chat_request_requires_model_when_provider_is_set() -> None:
