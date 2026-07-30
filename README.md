@@ -228,10 +228,10 @@ python -m opencad.cli run examples/hardware_mounting_bracket.py \
   --tree-output bracket-tree.json
 ```
 
-The agent service can also generate example-style Python scripts for different LLM providers
-through LiteLLM by posting `llm_provider`, `llm_model`, and `generate_code=true` to `/chat`.
-When `generate_code` is enabled, the response includes `generated_code` and leaves the feature
-tree unchanged.
+The agent service generates and executes OpenCAD Python through LiteLLM for every `/chat`
+request. Provider and model can be supplied as `llm_provider` and `llm_model`, or configured
+with `OPENCAD_LLM_PROVIDER` and `OPENCAD_LLM_MODEL`. Responses include `generated_code`,
+executed operations, and the updated feature tree.
 
 For a runnable script example, see [`examples/agents/README.md`](examples/agents/README.md).
 

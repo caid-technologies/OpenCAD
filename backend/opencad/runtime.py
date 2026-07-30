@@ -121,8 +121,8 @@ class RuntimeContext:
         """HTTP-compatible kernel call adapter for in-process agent runtimes."""
         return registry_result_to_dict(self.registry, operation, payload)
 
-    def chat(self, message: str, *, reasoning: bool = False) -> tuple[str, list[dict[str, Any]]]:
-        """Run the agent planner in-process and merge resulting tree state."""
+    def chat(self, message: str) -> tuple[str, list[dict[str, Any]]]:
+        """Run the LLM-backed agent in-process and merge resulting tree state."""
         from opencad_agent.models import ChatRequest
         from opencad_agent.service import OpenCadAgentService
 
@@ -132,7 +132,6 @@ class RuntimeContext:
                 message=message,
                 tree_state=self.tree,
                 conversation_history=[],
-                reasoning=reasoning,
             )
         )
         self.tree = response.new_tree_state

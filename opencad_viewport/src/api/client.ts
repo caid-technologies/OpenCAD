@@ -48,7 +48,7 @@ export class OpenCadApiClient {
 
   async sendChat(request: ChatRequestPayload): Promise<ChatResponsePayload> {
     if (this.useChatMock) {
-      const mock = await mockChat(request.message, Boolean(request.reasoning));
+      const mock = await mockChat(request.message);
       return {
         response: mock.response,
         operations_executed: mock.operations,
