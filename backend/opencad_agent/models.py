@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from opencad_tree.models import FeatureTree
 
@@ -13,13 +13,13 @@ class ChatHistoryItem(BaseModel):
 
 
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     message: str
     tree_state: FeatureTree
     conversation_history: list[ChatHistoryItem] = Field(default_factory=list)
-    reasoning: bool = False
     llm_provider: str | None = None
     llm_model: str | None = None
-    generate_code: bool = False
 
     @model_validator(mode="after")
     def _validate_llm_configuration(self) -> ChatRequest:

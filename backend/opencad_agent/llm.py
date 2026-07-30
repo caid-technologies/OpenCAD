@@ -8,10 +8,7 @@ from opencad_agent.models import ChatHistoryItem
 logger = logging.getLogger(__name__)
 
 LiteLlmCompletion = Callable[..., Any]
-# Keep code generation near-deterministic by default, but allow a modest bump when
-# the caller enables higher-reasoning responses and wants a bit more variation.
 DEFAULT_CODE_TEMPERATURE = 0.2
-HIGH_REASONING_CODE_TEMPERATURE = 0.5
 
 
 def _default_completion(**kwargs: Any) -> Any:
@@ -73,7 +70,6 @@ class LiteLlmProvider:
         system_prompt: str,
         user_message: str,
         conversation_history: list[ChatHistoryItem],
-        reasoning: bool,
     ) -> str:
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend({"role": item.role, "content": item.content} for item in conversation_history)
@@ -82,12 +78,12 @@ class LiteLlmProvider:
         completion_options: dict[str, Any] = {
             "model": resolved_model,
             "messages": messages,
-            "temperature": HIGH_REASONING_CODE_TEMPERATURE if reasoning else DEFAULT_CODE_TEMPERATURE,
+            "temperature": DEFAULT_CODE_TEMPERATURE,
             "max_tokens": 1600,
             "seed": 0,
         }
         if resolved_model.startswith("ollama/"):
-            completion_options["reasoning_effort"] = "high" if reasoning else "none"
+            completion_options["reasoning_effort"] = "none"
         response = self._completion(**completion_options)
         logger.debug("Received LLM code-generation response")
         cleaned_response = _strip_code_fences(_extract_message_content(response))

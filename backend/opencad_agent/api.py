@@ -9,7 +9,6 @@ router = APIRouter()
 from opencad.api_app import create_api_app
 from opencad.version import __version__
 from opencad_agent.models import ChatRequest, ChatResponse
-from opencad_agent.planner import UnsupportedPromptError
 from opencad_agent.service import (
     AgentConfigurationError,
     GeneratedCodeExecutionError,
@@ -35,7 +34,7 @@ def chat(request: ChatRequest) -> ChatResponse:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except LlmGenerationError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-    except (GeneratedCodeExecutionError, GeneratedCodeValidationError, UnsupportedPromptError) as exc:
+    except (GeneratedCodeExecutionError, GeneratedCodeValidationError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 

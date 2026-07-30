@@ -102,7 +102,7 @@ describe("OpenCadApiClient routes", () => {
   });
 
   it("surfaces agent API error details", async () => {
-    const error = { response: { data: { detail: "Generate Code requires an LLM." } } };
+    const error = { response: { data: { detail: "Chat requires an LLM." } } };
     mockedAxios.post.mockRejectedValue(error);
     mockedAxios.isAxiosError.mockReturnValue(true);
 
@@ -112,8 +112,7 @@ describe("OpenCadApiClient routes", () => {
       message: "Build a cog",
       tree_state: { nodes: {}, root_id: "root", active_branch: "main", revision: 0 },
       conversation_history: [],
-      generate_code: true,
-    })).rejects.toThrow("Generate Code requires an LLM.");
+    })).rejects.toThrow("Chat requires an LLM.");
   });
 
   it("uses custom kernel URL for streaming mesh events", () => {

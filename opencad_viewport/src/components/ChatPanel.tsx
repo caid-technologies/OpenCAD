@@ -16,8 +16,6 @@ export function ChatPanel({ onSend }: ChatPanelProps): JSX.Element {
   const [messages, setMessages] = useState<ChatHistoryItem[]>([]);
   const [operations, setOperations] = useState<ChatOperationExecution[]>([]);
   const [input, setInput] = useState("");
-  const [reasoning, setReasoning] = useState(false);
-  const [generateCode, setGenerateCode] = useState(true);
   const [pending, setPending] = useState(false);
 
   const submit = async () => {
@@ -28,16 +26,14 @@ export function ChatPanel({ onSend }: ChatPanelProps): JSX.Element {
 
     setPending(true);
     setInput("");
-    const conversationHistory = [...messages, { role: "user", content: message } satisfies ChatHistoryItem];
-    setMessages(conversationHistory);
+    const priorHistory = messages;
+    setMessages([...priorHistory, { role: "user", content: message } satisfies ChatHistoryItem]);
     setOperations([]);
 
     try {
       const result = await onSend({
         message,
-        conversation_history: conversationHistory,
-        reasoning,
-        generate_code: generateCode,
+        conversation_history: priorHistory,
       });
 
       const assistantMessage: ChatHistoryItem = { role: "assistant", content: "" };
@@ -73,24 +69,6 @@ export function ChatPanel({ onSend }: ChatPanelProps): JSX.Element {
     <section className="chat-panel">
       <header className="chat-header">
         <h3>AI Chat</h3>
-        <div className="chat-options">
-          <label className="reasoning-toggle">
-            <input
-              type="checkbox"
-              checked={reasoning}
-              onChange={(event) => setReasoning(event.target.checked)}
-            />
-            High Reasoning
-          </label>
-          <label className="reasoning-toggle">
-            <input
-              type="checkbox"
-              checked={generateCode}
-              onChange={(event) => setGenerateCode(event.target.checked)}
-            />
-            Generate Code
-          </label>
-        </div>
       </header>
 
       <div className="chat-messages">
@@ -116,7 +94,7 @@ export function ChatPanel({ onSend }: ChatPanelProps): JSX.Element {
         <input
           type="text"
           value={input}
-          placeholder={generateCode ? "Describe code for the agent to generate" : "Describe a feature to build"}
+          placeholder="Describe a part to build"
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {

@@ -138,7 +138,7 @@ export async function mockSolveSketch(sketch: SketchPayload): Promise<SolverResu
   };
 }
 
-export async function mockChat(message: string, reasoning: boolean): Promise<{ response: string; operations: ChatOperationExecution[] }> {
+export async function mockChat(message: string): Promise<{ response: string; operations: ChatOperationExecution[] }> {
   const operations: ChatOperationExecution[] = [
     {
       tool: "add_sketch",
@@ -160,12 +160,8 @@ export async function mockChat(message: string, reasoning: boolean): Promise<{ r
     }
   ];
 
-  const detail = reasoning
-    ? "Planned a three-step sequence and checked IDs before each tool call."
-    : "Completed requested feature updates.";
-
   return {
-    response: `Mock agent response to: \"${message}\". ${detail}`,
+    response: `Mock agent response to: \"${message}\". Completed requested feature updates.`,
     operations
   };
 }

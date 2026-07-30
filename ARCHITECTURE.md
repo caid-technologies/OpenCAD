@@ -23,7 +23,6 @@
   - Prompt input + send flow
   - Streaming assistant response rendering
   - Operation execution list with per-step status
-  - `High Reasoning` toggle
 
 ### Data Contracts
 
@@ -42,7 +41,7 @@
 
 ### Mock-First Development
 
-The viewport client (`src/api/client.ts`) defaults viewport geometry/solver flows to mock mode via `VITE_USE_MOCK`.
+The viewport client (`src/api/client.ts`) uses live geometry/solver flows by default; mock mode is opt-in via `VITE_USE_MOCK=true`.
 Chat uses the live agent service by default, with an opt-in mocked chat path via `VITE_USE_CHAT_MOCK=true`.
 
 ### Storybook Coverage
@@ -72,10 +71,8 @@ Chat uses the live agent service by default, with an opt-in mocked chat path via
     - `message: str`
     - `tree_state: FeatureTree`
     - `conversation_history: []`
-    - `reasoning: bool`
     - `llm_provider: str | null` (optional, for LiteLLM-backed code generation)
     - `llm_model: str | null` (optional, for LiteLLM-backed code generation)
-    - `generate_code: bool` (optional, returns example-style Python instead of executing tools)
   - Output:
     - `response: str`
     - `generated_code: str | null`
@@ -99,12 +96,9 @@ Chat uses the live agent service by default, with an opt-in mocked chat path via
     - `add_cylinder`
     - `get_tree_state`
     - `get_shape_info`
-- `planner.py`
-  - Sequence planning + deterministic execution path
-  - Includes a mission prompt path for mounting bracket generation (8+ operations)
 - `service.py`
-  - Request orchestration and response assembly
-  - Optional LiteLLM-backed code generation path for multi-provider responses
+  - Always generates OpenCAD code through LiteLLM
+  - Validates, repairs once when needed, executes, and returns the updated tree
 
 ## Cross-Service Integration
 
@@ -230,9 +224,8 @@ Requires topology reference stability. See [TOPOLOGY.md](TOPOLOGY.md) for:
 
 ## Validation Coverage
 
-- 5 tests in `opencad_agent/tests/test_agent.py` verify:
+- `opencad_agent/tests/test_agent.py` verifies:
   - system prompt completeness
-  - mounting bracket prompt creates >=8 valid operations
-  - operation references use existing IDs
-  - reasoning toggle changes response style
+  - fixed low-temperature, non-reasoning LLM settings
+  - generated-code policy and execution
   - API round-trip and health endpoint

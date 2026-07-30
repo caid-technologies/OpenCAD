@@ -145,10 +145,8 @@ export interface ChatRequestPayload {
   message: string;
   tree_state: FeatureTreeView;
   conversation_history: ChatHistoryItem[];
-  reasoning?: boolean;
   llm_provider?: string;
   llm_model?: string;
-  generate_code?: boolean;
 }
 
 export interface ChatResponsePayload {

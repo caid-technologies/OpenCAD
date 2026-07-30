@@ -93,4 +93,4 @@ Validate:
 - feature tree selection highlights shapes
 - sketch overlay shows icons and solve status
 - chat panel streams response and operation statuses
-- reasoning toggle changes agent response style
+- chat requests always generate and execute validated LLM code
