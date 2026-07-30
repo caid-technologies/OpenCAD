@@ -3,8 +3,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BACKEND_DIR="$ROOT_DIR/backend"
-FRONTEND_DIR="$ROOT_DIR/opencad_viewport"
+BACKEND_DIR="$ROOT_DIR/apps/backend"
+FRONTEND_DIR="$ROOT_DIR/apps/opencad_viewport"
 
 BACKEND_HOST="${BACKEND_HOST:-127.0.0.1}"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
@@ -55,7 +55,7 @@ backend_pid=$!
 echo "Starting frontend on http://$FRONTEND_HOST:$FRONTEND_PORT"
 (
   cd "$FRONTEND_DIR"
-  pnpm dev -- --host "$FRONTEND_HOST" --port "$FRONTEND_PORT"
+  pnpm dev --host "$FRONTEND_HOST" --port "$FRONTEND_PORT"
 ) &
 frontend_pid=$!
 

@@ -13,12 +13,10 @@ A modular CAD system for parametric, programmable, and AI-assisted design
 ## Layout
 
 ```text
-opencad_kernel/      # 1 – Geometry Kernel
-opencad_solver/      # 2 – Constraint Solver
-opencad_tree/        # 3 – Feature Tree
-opencad_viewport/    # 4 – 3D Viewport (frontend)
-opencad_agent/       # 5 – AI Chat Agent
-scripts/             # Backend smoke tests
+apps/
+├── backend/             # Python API, kernel, solver, tree, and agent
+└── opencad_viewport/    # React + Three.js frontend
+scripts/                 # Development and smoke-test scripts
 ```
 
 ## Quickstart
@@ -53,7 +51,7 @@ uv sync --extra full
 Each service runs on its own port:
 
 ```bash
-cd backend
+cd apps/backend
 uv run --no-sync python -m uvicorn api:app --reload --port 8000
 ```
 
@@ -62,9 +60,9 @@ uv run --no-sync python -m uvicorn api:app --reload --port 8000
 To start the backend and frontend together from the repository root:
 
 ```bash
-cd opencad_viewport
+cd apps/opencad_viewport
 pnpm install
-cd ..
+cd ../..
 ./scripts/run_dev.sh
 ```
 
@@ -93,7 +91,7 @@ curl -s http://127.0.0.1:8000/tree/healthz
 ### 4. Start the frontend
 
 ```bash
-cd opencad_viewport
+cd apps/opencad_viewport
 pnpm install
 pnpm dev                                 # → http://localhost:5173
 ```
@@ -108,13 +106,13 @@ Build the backend image from the repository root so Docker can see the Python
 project metadata and backend package files:
 
 ```bash
-docker build -f backend/Dockerfile -t opencad-backend .
+docker build -f apps/backend/Dockerfile -t opencad-backend .
 ```
 
 Build the frontend image from the viewport directory:
 
 ```bash
-docker build -f opencad_viewport/Dockerfile -t opencad-frontend opencad_viewport
+docker build -f apps/opencad_viewport/Dockerfile -t opencad-frontend apps/opencad_viewport
 ```
 
 Run the backend API on port `8000`:
@@ -135,12 +133,12 @@ mock mode, pass build args:
 
 ```bash
 docker build \
-  -f opencad_viewport/Dockerfile \
+  -f apps/opencad_viewport/Dockerfile \
   -t opencad-frontend \
   --build-arg VITE_BASE_URL=http://localhost:8000 \
   --build-arg VITE_USE_MOCK=false \
   --build-arg VITE_USE_CHAT_MOCK=false \
-  opencad_viewport
+  apps/opencad_viewport
 ```
 
 ## Configuration
