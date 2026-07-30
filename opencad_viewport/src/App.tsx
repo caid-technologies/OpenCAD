@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { OpenCadApiClient } from "./api/client";
 import { ChatPanel } from "./components/ChatPanel";
+import { CadFileToolbar } from "./components/CadFileToolbar";
 import { FeatureTreePanel } from "./components/FeatureTreePanel";
 import { SketchEditor } from "./components/SketchEditor";
 import { Viewport3D } from "./components/Viewport3D";
 import { mockMeshes } from "./mock/mockData";
 import { sketchFromNode } from "./sketchData";
 import { createEmptyTree } from "./types";
-import type { ChatOperationExecution, FeatureNodeView, FeatureTreeView, MeshPayload } from "./types";
+import type { CadFileFormat, ChatOperationExecution, FeatureNodeView, FeatureTreeView, MeshPayload } from "./types";
 
 const FALLBACK_MESH_Y_OFFSET_SCALE = 0.35;
 
@@ -115,6 +116,48 @@ export default function App(): JSX.Element {
       />
 
       <main className="workspace">
+        <CadFileToolbar
+          canExport={Boolean(selectedShapeId)}
+          onImport={async (file) => {
+            const imported = await api.importCadFile(file);
+            const nodeId = `import-${imported.shape_id}`;
+            const importedNode: FeatureNodeView = {
+              id: nodeId,
+              name: imported.filename,
+              operation: imported.format === "stl" ? "import_stl" : "import_step",
+              parameters: { filename: imported.filename, format: imported.format },
+              typed_parameters: {},
+              parameter_bindings: [],
+              sketch_id: null,
+              parent_id: null,
+              tool_refs: [],
+              depends_on: [],
+              shape_id: imported.shape_id,
+              status: "built",
+              suppressed: false,
+            };
+            setTree((current) => ({
+              ...current,
+              nodes: { ...current.nodes, [nodeId]: importedNode },
+              revision: current.revision + 1,
+            }));
+            setSelectedNodeId(nodeId);
+          }}
+          onExport={async (format: CadFileFormat) => {
+            if (!selectedShapeId) return;
+            const baseName = (selectedNode?.name ?? "opencad-shape").replace(/\.(step|stp|stl)$/i, "");
+            const filename = `${baseName}.${format}`;
+            const blob = await api.exportCadFile(selectedShapeId, format, filename);
+            const downloadUrl = URL.createObjectURL(blob);
+            const anchor = document.createElement("a");
+            anchor.href = downloadUrl;
+            anchor.download = filename;
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            URL.revokeObjectURL(downloadUrl);
+          }}
+        />
         <Viewport3D
           meshes={meshes}
           selectedShapeId={selectedShapeId}

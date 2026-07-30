@@ -26,10 +26,12 @@ from opencad_kernel.operations.schemas import (
     CreateSphereInput,
     CreateTorusInput,
     DraftInput,
+    ExportStlInput,
     ExportStepInput,
     ExtrudeInput,
     FilletEdgesInput,
     ImportStepInput,
+    ImportStlInput,
     LinearPatternInput,
     LoftInput,
     MirrorInput,
@@ -108,6 +110,10 @@ class KernelBackend(Protocol):
     def import_step(self, payload: ImportStepInput) -> OperationResult: ...
 
     def export_step(self, payload: ExportStepInput) -> OperationResult: ...
+
+    def import_stl(self, payload: ImportStlInput) -> OperationResult: ...
+
+    def export_stl(self, payload: ExportStlInput) -> OperationResult: ...
 
     # ── Tessellation ────────────────────────────────────────────────
 

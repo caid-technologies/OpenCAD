@@ -225,14 +225,15 @@ def test_tessellate_face_streaming(backend):
 # ── STEP I/O (real OCCT) ───────────────────────────────────────────
 
 
-def test_step_export_import_roundtrip(backend, tmp_path):
+@pytest.mark.parametrize("extension", ["step", "stp"])
+def test_step_export_import_roundtrip(backend, tmp_path, extension):
     from opencad_kernel.core.models import Success
     from opencad_kernel.operations.schemas import CreateBoxInput, ExportStepInput, ImportStepInput
 
     box = backend.create_box(CreateBoxInput(length=10.0, width=5.0, height=3.0))
     assert isinstance(box, Success) and box.shape_id
 
-    step_path = str(tmp_path / "test.step")
+    step_path = str(tmp_path / f"test.{extension}")
     export_result = backend.export_step(ExportStepInput(shape_id=box.shape_id, filepath=step_path))
     assert isinstance(export_result, Success)
 
@@ -241,6 +242,25 @@ def test_step_export_import_roundtrip(backend, tmp_path):
     assert import_result.shape is not None
     # Volume should be preserved through STEP round-trip
     assert import_result.shape.volume == pytest.approx(box.shape.volume, rel=0.05)
+
+
+def test_stl_export_import_roundtrip(backend, tmp_path):
+    from opencad_kernel.core.models import Success
+    from opencad_kernel.operations.schemas import CreateBoxInput, ExportStlInput, ImportStlInput
+
+    box = backend.create_box(CreateBoxInput(length=10.0, width=5.0, height=3.0))
+    assert isinstance(box, Success) and box.shape_id
+
+    stl_path = str(tmp_path / "test.stl")
+    export_result = backend.export_stl(ExportStlInput(shape_id=box.shape_id, filepath=stl_path))
+    assert isinstance(export_result, Success)
+
+    import_result = backend.import_stl(ImportStlInput(filepath=stl_path))
+    assert isinstance(import_result, Success)
+    assert import_result.shape_id
+    mesh = backend.tessellate(import_result.shape_id, deflection=0.1)
+    assert mesh.vertices
+    assert mesh.faces
 
 
 # ── Native shape access ────────────────────────────────────────────

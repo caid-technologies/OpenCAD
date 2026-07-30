@@ -3,14 +3,17 @@ from __future__ import annotations
 import json
 import logging
 import os
+import tempfile
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
+from starlette.background import BackgroundTask
 
 from opencad.api_app import create_api_app
 from opencad.version import __version__
@@ -58,12 +61,88 @@ class OperationCallRequest(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
+class CadImportResponse(BaseModel):
+    shape_id: str
+    filename: str
+    format: Literal["step", "stp", "stl"]
+
+
+_CAD_MEDIA_TYPES = {
+    "step": "model/step",
+    "stp": "model/step",
+    "stl": "model/stl",
+}
+_MAX_CAD_UPLOAD_BYTES = 100 * 1024 * 1024
+
+
 # ── Health ──────────────────────────────────────────────────────────
 
 
 @router.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok", "backend": _BACKEND_NAME}
+
+
+@router.post("/files/import", response_model=CadImportResponse)
+async def import_cad_file(request: Request, filename: str = Query(min_length=1)) -> CadImportResponse:
+    safe_filename = Path(filename).name
+    suffix = Path(safe_filename).suffix.lower()
+    if suffix not in {".step", ".stp", ".stl"}:
+        raise HTTPException(status_code=415, detail="Supported import formats are .step, .stp, and .stl.")
+
+    file_descriptor, temporary_path = tempfile.mkstemp(suffix=suffix)
+    os.close(file_descriptor)
+    total_bytes = 0
+    try:
+        with open(temporary_path, "wb") as output:
+            async for chunk in request.stream():
+                total_bytes += len(chunk)
+                if total_bytes > _MAX_CAD_UPLOAD_BYTES:
+                    raise HTTPException(status_code=413, detail="CAD uploads are limited to 100 MB.")
+                output.write(chunk)
+        if total_bytes == 0:
+            raise HTTPException(status_code=400, detail="Uploaded CAD file is empty.")
+
+        operation = "import_stl" if suffix == ".stl" else "import_step"
+        result = _REGISTRY.call(operation, {"filepath": temporary_path})
+        if isinstance(result, Failure):
+            raise HTTPException(status_code=422, detail=result.message)
+        if not result.shape_id:
+            raise HTTPException(status_code=500, detail="CAD import returned no shape ID.")
+        return CadImportResponse(
+            shape_id=result.shape_id,
+            filename=safe_filename,
+            format=suffix.removeprefix("."),
+        )
+    finally:
+        Path(temporary_path).unlink(missing_ok=True)
+
+
+@router.get("/files/{shape_id}/export")
+def export_cad_file(
+    shape_id: str,
+    format: Literal["step", "stp", "stl"] = Query(),
+    filename: str | None = Query(default=None),
+) -> FileResponse:
+    suffix = f".{format}"
+    file_descriptor, temporary_path = tempfile.mkstemp(suffix=suffix)
+    os.close(file_descriptor)
+    operation = "export_stl" if format == "stl" else "export_step"
+    result = _REGISTRY.call(operation, {"shape_id": shape_id, "filepath": temporary_path})
+    if isinstance(result, Failure):
+        Path(temporary_path).unlink(missing_ok=True)
+        status_code = 404 if result.code.value == "SHAPE_NOT_FOUND" else 422
+        raise HTTPException(status_code=status_code, detail=result.message)
+
+    requested_name = Path(filename).name if filename else f"opencad-{shape_id}{suffix}"
+    if Path(requested_name).suffix.lower() != suffix:
+        requested_name = f"{Path(requested_name).stem}{suffix}"
+    return FileResponse(
+        temporary_path,
+        media_type=_CAD_MEDIA_TYPES[format],
+        filename=requested_name,
+        background=BackgroundTask(Path(temporary_path).unlink, missing_ok=True),
+    )
 
 
 # ── Operations ──────────────────────────────────────────────────────

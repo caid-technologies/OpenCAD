@@ -56,6 +56,38 @@ describe("OpenCadApiClient routes", () => {
     });
   });
 
+  it("uploads STEP, STP, and STL files through the kernel gateway", async () => {
+    const result = { shape_id: "shape-imported", filename: "bracket.stl", format: "stl" };
+    mockedAxios.post.mockResolvedValue({ data: result });
+    const file = new File(["solid bracket"], "bracket.stl", { type: "model/stl" });
+    const client = new OpenCadApiClient("http://127.0.0.1:8003", undefined, false, false);
+
+    await expect(client.importCadFile(file)).resolves.toEqual(result);
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      "http://127.0.0.1:8003/kernel/files/import",
+      file,
+      {
+        params: { filename: "bracket.stl" },
+        headers: { "Content-Type": "application/octet-stream" },
+      },
+    );
+  });
+
+  it("downloads the selected shape in the requested CAD format", async () => {
+    const blob = new Blob(["ISO-10303-21"], { type: "model/step" });
+    mockedAxios.get.mockResolvedValue({ data: blob });
+    const client = new OpenCadApiClient("http://127.0.0.1:8003", undefined, false, false);
+
+    await expect(client.exportCadFile("shape-1", "stp", "Bracket.stp")).resolves.toBe(blob);
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      "http://127.0.0.1:8003/kernel/files/shape-1/export",
+      {
+        params: { format: "stp", filename: "Bracket.stp" },
+        responseType: "blob",
+      },
+    );
+  });
+
   it("registers, updates, and rebuilds a sketch tree", async () => {
     const tree = {
       nodes: {
