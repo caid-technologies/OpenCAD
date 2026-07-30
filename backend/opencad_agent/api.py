@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, APIRouter
+from fastapi import APIRouter, FastAPI, HTTPException
 
 load_dotenv()
 router = APIRouter()
@@ -9,7 +9,14 @@ router = APIRouter()
 from opencad.api_app import create_api_app
 from opencad.version import __version__
 from opencad_agent.models import ChatRequest, ChatResponse
-from opencad_agent.service import OpenCadAgentService
+from opencad_agent.planner import UnsupportedPromptError
+from opencad_agent.service import (
+    AgentConfigurationError,
+    GeneratedCodeExecutionError,
+    GeneratedCodeValidationError,
+    LlmGenerationError,
+    OpenCadAgentService,
+)
 
 app: FastAPI = create_api_app(title="OpenCAD Agent", version=__version__)
 _service = OpenCadAgentService()
@@ -22,7 +29,14 @@ def healthz() -> dict[str, str]:
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
-    return _service.chat(request)
+    try:
+        return _service.chat(request)
+    except AgentConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except LlmGenerationError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except (GeneratedCodeExecutionError, GeneratedCodeValidationError, UnsupportedPromptError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 app.include_router(router)
