@@ -16,13 +16,18 @@ _USE_LIVE_KERNEL = os.environ.get("OPENCAD_AGENT_LIVE_KERNEL", "false").lower() 
 KernelCall = Callable[[str, dict[str, Any]], dict[str, Any]]
 
 
+def _kernel_operation_url(operation: str) -> str:
+    base_url = _KERNEL_URL.rstrip("/")
+    if not base_url.endswith("/kernel"):
+        base_url = f"{base_url}/kernel"
+    return f"{base_url}/operations/{operation}"
+
+
 def _call_kernel(operation: str, params: dict[str, Any]) -> dict[str, Any]:
     """Call the kernel service over HTTP and return the response dict."""
     import httpx
 
-    # This is a temp fix as it is hardcoded and could cause
-    # breaking changes in the future
-    url = f"{_KERNEL_URL}/kernel/operations/{operation}"
+    url = _kernel_operation_url(operation)
     response = httpx.post(url, json={"payload": params}, timeout=30.0)
     response.raise_for_status()
     return response.json()

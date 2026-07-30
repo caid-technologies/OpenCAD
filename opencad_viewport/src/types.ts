@@ -81,7 +81,26 @@ export interface SketchCircle {
   radius: number;
 }
 
-export type SketchEntity = SketchPoint | SketchLine | SketchCircle;
+export interface SketchArc {
+  id: string;
+  type: "arc";
+  cx: number;
+  cy: number;
+  radius: number;
+  start_angle: number;
+  end_angle: number;
+}
+
+export interface SketchRectangle {
+  id: string;
+  type: "rectangle";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export type SketchEntity = SketchPoint | SketchLine | SketchCircle | SketchArc | SketchRectangle;
 
 export interface SketchConstraint {
   id: string;

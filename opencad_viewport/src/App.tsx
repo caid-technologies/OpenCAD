@@ -5,8 +5,9 @@ import { FeatureTreePanel } from "./components/FeatureTreePanel";
 import { SketchEditor } from "./components/SketchEditor";
 import { Viewport3D } from "./components/Viewport3D";
 import { mockMeshes } from "./mock/mockData";
-import { createEmptyTree, createEmptySketch } from "./types";
-import type { ChatOperationExecution, FeatureNodeView, FeatureTreeView, MeshPayload, SketchPayload } from "./types";
+import { sketchFromNode } from "./sketchData";
+import { createEmptyTree } from "./types";
+import type { ChatOperationExecution, FeatureNodeView, FeatureTreeView, MeshPayload } from "./types";
 
 const FALLBACK_MESH_Y_OFFSET_SCALE = 0.35;
 
@@ -59,12 +60,11 @@ export default function App(): JSX.Element {
   const api = useMemo(() => new OpenCadApiClient(), []);
   const [tree, setTree] = useState<FeatureTreeView>(createEmptyTree);
   const [meshes, setMeshes] = useState<MeshPayload[]>([]);
-  const [sketch, setSketch] = useState<SketchPayload>(createEmptySketch);
   const [selectedNodeId, setSelectedNodeId] = useState<string>(tree.root_id);
 
   const selectedShapeId = tree.nodes[selectedNodeId]?.shape_id ?? null;
   const selectedNode = tree.nodes[selectedNodeId] ?? null;
-  const sketchMode = Boolean(selectedNode?.sketch_id) || selectedNode?.operation === "add_sketch";
+  const selectedSketch = useMemo(() => sketchFromNode(selectedNode), [selectedNode]);
   const loadedShapeIds = useMemo(() => new Set(meshes.map((mesh) => mesh.shapeId)), [meshes]);
 
   useEffect(() => {
@@ -126,10 +126,22 @@ export default function App(): JSX.Element {
           }}
         />
         <SketchEditor
-          active={sketchMode}
-          sketch={sketch}
+          key={selectedNodeId}
+          active={selectedSketch !== null}
+          name={selectedNode?.name ?? "Sketch"}
+          sketch={selectedSketch}
           solveSketch={(payload) => api.solveSketch(payload)}
-          onSketchChange={(updated) => setSketch(updated)}
+          onApply={async (updated) => {
+            if (!selectedNode) {
+              return;
+            }
+            const nextTree = await api.updateSketch(tree, selectedNode.id, updated);
+            const liveShapeIds = new Set(
+              Object.values(nextTree.nodes).map((node) => node.shape_id).filter(Boolean),
+            );
+            setMeshes((current) => current.filter((mesh) => liveShapeIds.has(mesh.shapeId)));
+            setTree(nextTree);
+          }}
         />
       </main>
 

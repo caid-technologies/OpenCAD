@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 
 from dotenv import load_dotenv
 
@@ -15,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from opencad.api_app import create_api_app
 from opencad.version import __version__
+from opencad_solver.models import Sketch
 from opencad_tree.models import FeatureNode, FeatureTree, RebuildRequest, TreeSnapshotV1
 from opencad_tree.service import FeatureTreeService
 
@@ -88,18 +90,10 @@ def _kernel_client_stub(node: FeatureNode, _tree: FeatureTree) -> str:
 def _kernel_client_live(node: FeatureNode, _tree: FeatureTree) -> str:
     """Call the real kernel service over HTTP."""
     import httpx
+    from opencad.kernel_adapter import normalize_feature_operation, resolve_feature_references
 
-    op_name = node.operation
-    params = dict(node.parameters)
-
-    # Map feature-tree parameter conventions to kernel schema
-    # The tree stores references to parent features; resolve their shape_ids.
-    for key in ("shape_id", "shape_a_id", "shape_b_id", "base_id", "tool_id"):
-        ref = params.get(key)
-        if ref and ref in _tree.nodes:
-            resolved = _tree.nodes[ref].shape_id
-            if resolved:
-                params[key] = resolved
+    op_name, params = normalize_feature_operation(node.operation, node.parameters)
+    params = resolve_feature_references(params, _tree)
 
     url = f"{_KERNEL_URL}/operations/{op_name}"
     response = httpx.post(url, json={"payload": params}, timeout=30.0)
@@ -184,6 +178,78 @@ def edit_node(tree_id: str, node_id: str, request: EditFeatureRequest) -> Featur
     tree = _get_tree_or_404(tree_id)
     try:
         updated = FeatureTreeService.edit_feature(tree, node_id=node_id, new_params=request.parameters)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    _TREES[tree_id] = updated
+    return updated
+
+
+def _kernel_segments(sketch: Sketch) -> list[dict[str, Any]]:
+    segments: list[dict[str, Any]] = []
+    for entity in sketch.entities.values():
+        payload = entity.model_dump()
+        entity_type = payload["type"]
+        if entity_type == "line":
+            segments.append({
+                "type": "line",
+                "start": (payload["x1"], payload["y1"]),
+                "end": (payload["x2"], payload["y2"]),
+            })
+        elif entity_type == "circle":
+            segments.append({
+                "type": "circle",
+                "center": (payload["cx"], payload["cy"]),
+                "radius": payload["radius"],
+            })
+        elif entity_type == "arc":
+            start_angle = payload["start_angle"]
+            end_angle = payload["end_angle"]
+            cx, cy, radius = payload["cx"], payload["cy"], payload["radius"]
+            segments.append({
+                "type": "arc",
+                "center": (cx, cy),
+                "radius": radius,
+                "start": (cx + radius * math.cos(start_angle), cy + radius * math.sin(start_angle)),
+                "end": (cx + radius * math.cos(end_angle), cy + radius * math.sin(end_angle)),
+            })
+        elif entity_type == "rectangle":
+            x, y = payload["x"], payload["y"]
+            width, height = payload["width"], payload["height"]
+            points = [(x, y), (x + width, y), (x + width, y + height), (x, y + height)]
+            segments.extend(
+                {"type": "line", "start": points[index], "end": points[(index + 1) % 4]}
+                for index in range(4)
+            )
+    return segments
+
+
+@router.put("/trees/{tree_id}/nodes/{node_id}/sketch", response_model=FeatureTree)
+def edit_sketch(tree_id: str, node_id: str, sketch: Sketch) -> FeatureTree:
+    tree = _get_tree_or_404(tree_id)
+    node = tree.nodes.get(node_id)
+    if node is None:
+        raise HTTPException(status_code=404, detail=f"Feature node '{node_id}' does not exist.")
+    if node.operation not in {"add_sketch", "create_sketch"} and node.sketch_id != node.id:
+        raise HTTPException(status_code=400, detail=f"Feature node '{node_id}' is not a sketch.")
+
+    segments = _kernel_segments(sketch)
+    if not segments:
+        raise HTTPException(status_code=400, detail="A rebuildable sketch requires line, circle, arc, or rectangle geometry.")
+
+    existing_order = node.parameters.get("profile_order", [])
+    if not isinstance(existing_order, list):
+        existing_order = []
+    entity_ids = list(sketch.entities)
+    profile_order = [entity_id for entity_id in existing_order if entity_id in sketch.entities]
+    profile_order.extend(entity_id for entity_id in entity_ids if entity_id not in profile_order)
+    parameters = {
+        "entities": {key: entity.model_dump() for key, entity in sketch.entities.items()},
+        "constraints": [constraint.model_dump(exclude_none=True) for constraint in sketch.constraints],
+        "profile_order": profile_order,
+        "segments": segments,
+    }
+    try:
+        updated = FeatureTreeService.edit_feature(tree, node_id=node_id, new_params=parameters)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     _TREES[tree_id] = updated

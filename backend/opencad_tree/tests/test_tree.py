@@ -156,6 +156,51 @@ def test_tree_healthz_endpoint() -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_tree_api_edits_solver_sketch_and_builds_kernel_segments() -> None:
+    client = TestClient(app)
+    tree = FeatureTree(
+        root_id="sketch-edit-api",
+        nodes={
+            "sketch-edit-api": FeatureNode(
+                id="sketch-edit-api",
+                name="Bore Profile",
+                operation="create_sketch",
+                parameters={
+                    "plane": "XY",
+                    "origin": (0.0, 0.0, 0.0),
+                    "entities": {"old": {"id": "old", "type": "circle", "center": (0.0, 0.0), "radius": 2.0}},
+                    "constraints": [],
+                    "profile_order": ["old"],
+                },
+                sketch_id="sketch-edit-api",
+                shape_id="shape-old",
+                status="built",
+            ),
+        },
+    )
+    assert client.post("/trees", json=tree.model_dump()).status_code == 200
+
+    response = client.put(
+        "/trees/sketch-edit-api/nodes/sketch-edit-api/sketch",
+        json={
+            "entities": {
+                "bore": {"id": "bore", "type": "circle", "cx": 3.0, "cy": 4.0, "radius": 5.0},
+            },
+            "constraints": [],
+        },
+    )
+
+    assert response.status_code == 200
+    edited = response.json()["nodes"]["sketch-edit-api"]
+    assert edited["status"] == "stale"
+    assert edited["shape_id"] is None
+    assert edited["parameters"]["entities"]["bore"]["cx"] == 3.0
+    assert edited["parameters"]["profile_order"] == ["bore"]
+    assert edited["parameters"]["segments"] == [
+        {"type": "circle", "center": [3.0, 4.0], "radius": 5.0}
+    ]
+
+
 def test_missing_dependency_rejected() -> None:
     tree = _build_12_node_tree()
     tree.nodes["rib1"].depends_on = ["does-not-exist"]

@@ -6,6 +6,7 @@ import { OpenCadApiClient } from "./client";
 vi.mock("axios", () => ({
   default: {
     post: vi.fn(),
+    put: vi.fn(),
     get: vi.fn(),
     isAxiosError: vi.fn(),
   },
@@ -53,6 +54,51 @@ describe("OpenCadApiClient routes", () => {
     expect(mockedAxios.get).toHaveBeenCalledWith("http://127.0.0.1:8003/kernel/shapes/shape-1/mesh", {
       params: { deflection: 0.2 },
     });
+  });
+
+  it("registers, updates, and rebuilds a sketch tree", async () => {
+    const tree = {
+      nodes: {
+        "sketch-1": {
+          id: "sketch-1",
+          name: "Profile",
+          operation: "create_sketch",
+          parameters: { entities: {}, constraints: [] },
+          typed_parameters: {},
+          parameter_bindings: [],
+          sketch_id: "sketch-1",
+          parent_id: null,
+          tool_refs: [],
+          depends_on: [],
+          shape_id: "shape-1",
+          status: "built" as const,
+          suppressed: false,
+        },
+      },
+      root_id: "sketch-1",
+      active_branch: "main",
+      revision: 0,
+    };
+    const sketch = {
+      entities: { c1: { id: "c1", type: "circle" as const, cx: 0, cy: 0, radius: 5 } },
+      constraints: [],
+    };
+    mockedAxios.post.mockResolvedValueOnce({ data: tree }).mockResolvedValueOnce({ data: tree });
+    mockedAxios.put.mockResolvedValue({ data: tree });
+
+    const client = new OpenCadApiClient("http://127.0.0.1:8003", undefined, false, false);
+    await client.updateSketch(tree, "sketch-1", sketch);
+
+    expect(mockedAxios.post).toHaveBeenNthCalledWith(1, "http://127.0.0.1:8003/tree/trees", tree);
+    expect(mockedAxios.put).toHaveBeenCalledWith(
+      "http://127.0.0.1:8003/tree/trees/sketch-1/nodes/sketch-1/sketch",
+      sketch,
+    );
+    expect(mockedAxios.post).toHaveBeenNthCalledWith(
+      2,
+      "http://127.0.0.1:8003/tree/trees/sketch-1/rebuild",
+      { continue_on_error: false },
+    );
   });
 
   it("surfaces agent API error details", async () => {
