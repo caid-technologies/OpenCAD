@@ -166,6 +166,7 @@ class OperationRegistry:
         entry_kwargs: dict[str, Any] = {
             "operation": name,
             "version": spec.version,
+            "backend": type(self.kernel.backend).__name__,
             "params": payload,
             "result_shape_id": result.shape_id if is_success else None,
             "success": is_success,

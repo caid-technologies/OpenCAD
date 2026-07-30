@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
+from opencad_kernel.core.backend import KernelBackend
 from opencad_kernel.operations.handlers import OpenCadKernel
 from opencad_kernel.operations.registry import OperationRegistry
 from opencad.kernel_adapter import execute_feature_node, registry_result_to_dict
@@ -18,9 +19,15 @@ if TYPE_CHECKING:
 class RuntimeContext:
     """Single-process OpenCAD runtime for headless/fluent usage."""
 
-    def __init__(self, *, id_strategy: str = "readable", kernel_call_fn: KernelCallFn | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        id_strategy: str = "readable",
+        kernel_call_fn: KernelCallFn | None = None,
+        backend: KernelBackend | None = None,
+    ) -> None:
         self._external_kernel_call = kernel_call_fn
-        self.kernel = OpenCadKernel(id_strategy=id_strategy)
+        self.kernel = OpenCadKernel(id_strategy=id_strategy, backend=backend)
         self.registry = OperationRegistry(self.kernel)
         self.tree = FeatureTree(root_id="root")
         self.last_feature_id: str | None = None

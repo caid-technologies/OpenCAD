@@ -18,6 +18,7 @@ from starlette.background import BackgroundTask
 from opencad.api_app import create_api_app
 from opencad.version import __version__
 from opencad_kernel.core.errors import Failure
+from opencad_kernel.core.backend import StreamingMeshBackend
 from opencad_kernel.core.models import MeshData, OperationResult, Success
 from opencad_kernel.core.snapshot import SnapshotV1
 from opencad_kernel.operations.handlers import OpenCadKernel
@@ -309,10 +310,10 @@ async def stream_mesh(
 ) -> StreamingResponse:
     """Stream tessellated mesh face-by-face as Server-Sent Events."""
     backend = _KERNEL.backend
-    if backend is None:
+    if not isinstance(backend, StreamingMeshBackend):
         raise HTTPException(
             status_code=501,
-            detail="Streaming tessellation requires an OCCT backend.",
+            detail="Streaming tessellation requires a face-streaming backend.",
         )
 
     # Verify shape exists before starting the stream
@@ -321,12 +322,6 @@ async def stream_mesh(
 
     async def _event_generator():
         try:
-            from opencad_kernel.core.occt_backend import OcctBackend
-
-            if not isinstance(backend, OcctBackend):
-                yield f"data: {json.dumps({'error': 'Backend does not support face streaming'})}\n\n"
-                return
-
             total = backend.count_faces(shape_id)
             for face_idx in range(total):
                 mesh, _ = backend.tessellate_face(shape_id, face_idx, deflection)

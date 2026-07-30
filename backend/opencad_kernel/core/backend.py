@@ -138,3 +138,17 @@ class KernelBackend(Protocol):
     def store(self) -> Any:
         """Return the ShapeStore (or equivalent) held by this backend."""
         ...
+
+
+@runtime_checkable
+class StreamingMeshBackend(KernelBackend, Protocol):
+    """Optional backend capability for face-by-face mesh streaming."""
+
+    def tessellate_face(
+        self,
+        shape_id: str,
+        face_index: int,
+        deflection: float = 0.1,
+    ) -> tuple[MeshData, int]: ...
+
+    def count_faces(self, shape_id: str) -> int: ...
