@@ -17,7 +17,15 @@ class ChatRequest(BaseModel):
     tree_state: FeatureTree
     conversation_history: list[ChatHistoryItem] = Field(default_factory=list)
     reasoning: bool = False
+    llm_provider: str | None = None
+    llm_model: str | None = None
     generate_code: bool = False
+
+    @model_validator(mode="after")
+    def _validate_llm_configuration(self) -> ChatRequest:
+        if self.llm_provider and not self.llm_model:
+            raise ValueError("llm_model is required when llm_provider is set.")
+        return self
 
 
 
