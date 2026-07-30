@@ -465,25 +465,12 @@ class AnalyticBackend:
         if not shape:
             return self._shape_not_found(payload.shape_id)
 
-        filepath = Path(payload.filepath)
-        payload_data = {
-            "shape_id": shape.id,
-            "kind": shape.kind,
-            "volume": shape.volume,
-            "bbox": shape.bbox.model_dump(),
-            "parameters": shape.parameters,
-        }
-        try:
-            filepath.write_text(f"OPENCAD-MOCK\n{json.dumps(payload_data)}\n", encoding="utf-8")
-        except OSError as exc:
-            return make_failure(
-                code=ErrorCode.IO_ERROR,
-                message=f"Failed to write STEP file: {exc}",
-                suggestion="Verify destination directory permissions.",
-                failed_check="step_io",
-            )
-
-        return Success(shape_id=shape.id, shape=None, metadata={"operation": "export_step", "filepath": payload.filepath})
+        return make_failure(
+            code=ErrorCode.UNSUPPORTED_STEP,
+            message="The analytic backend cannot export STEP geometry.",
+            suggestion="Use the OCCT backend and install it with: uv sync --extra occt",
+            failed_check="native_geometry_backend",
+        )
 
     def import_stl(self, payload: ImportStlInput) -> OperationResult:
         filepath = Path(payload.filepath)

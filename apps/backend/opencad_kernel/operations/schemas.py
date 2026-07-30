@@ -90,6 +90,7 @@ class SketchSegment(BaseModel):
     end: tuple[float, float] | None = None
     center: tuple[float, float] | None = None
     radius: float | None = None
+    subtract: bool = False
 
 
 class CreateSketchInput(BaseModel):

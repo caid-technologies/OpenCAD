@@ -17,6 +17,7 @@ from starlette.background import BackgroundTask
 
 from opencad.api_app import create_api_app
 from opencad.version import __version__
+from opencad_kernel.core.backend_factory import create_backend
 from opencad_kernel.core.errors import Failure
 from opencad_kernel.core.backend import StreamingMeshBackend
 from opencad_kernel.core.models import MeshData, OperationResult, Success
@@ -32,25 +33,13 @@ router = APIRouter()
 
 # ── Backend selection ───────────────────────────────────────────────
 
-# _BACKEND_NAME = os.environ.get("OPENCAD_KERNEL_BACKEND", "analytic")
 _BACKEND_NAME = os.environ.get("OPENCAD_KERNEL_BACKEND", "occt")
 
 
 def _build_kernel() -> OpenCadKernel:
-    if _BACKEND_NAME == "occt":
-        try:
-            from opencad_kernel.core.occt_backend import OcctBackend
-        except ImportError as exc:
-            raise RuntimeError(
-                "OPENCAD_KERNEL_BACKEND=occt but CadQuery/OCP is not installed.  "
-                "Install with: uv sync --extra occt"
-            ) from exc
-        backend = OcctBackend()
-        logger.info("Kernel started with OCCT backend")
-        return OpenCadKernel(backend=backend)
-    else:
-        logger.info("Kernel started with analytic (stub) backend")
-        return OpenCadKernel()
+    backend = create_backend(_BACKEND_NAME)
+    logger.info("Kernel started with %s backend", type(backend).__name__)
+    return OpenCadKernel(backend=backend)
 
 
 app: FastAPI = create_api_app(title="OpenCAD Kernel", version=__version__)

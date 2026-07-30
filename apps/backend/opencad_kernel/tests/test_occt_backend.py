@@ -196,6 +196,29 @@ def test_tessellate_cylinder(backend):
     assert len(mesh.faces) > 0
 
 
+def test_extrude_sketch_with_subtractive_circle(backend):
+    from math import pi
+
+    from opencad_kernel.core.models import Success
+    from opencad_kernel.operations.schemas import CreateSketchInput, ExtrudeInput, SketchSegment
+
+    segments = [
+        SketchSegment(type="line", start=(0, 0), end=(10, 0)),
+        SketchSegment(type="line", start=(10, 0), end=(10, 10)),
+        SketchSegment(type="line", start=(10, 10), end=(0, 10)),
+        SketchSegment(type="line", start=(0, 10), end=(0, 0)),
+        SketchSegment(type="circle", center=(5, 5), radius=2, subtract=True),
+    ]
+    sketch = backend.create_sketch(CreateSketchInput(segments=segments))
+    assert isinstance(sketch, Success) and sketch.shape_id
+
+    result = backend.extrude(ExtrudeInput(sketch_id=sketch.shape_id, distance=5))
+
+    assert isinstance(result, Success)
+    assert result.shape is not None
+    assert result.shape.volume == pytest.approx((100 - pi * 4) * 5, rel=0.01)
+
+
 def test_tessellate_missing_shape(backend):
     with pytest.raises(ValueError, match="not found"):
         backend.tessellate("nonexistent")

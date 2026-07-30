@@ -185,6 +185,7 @@ from opencad_kernel.operations.schemas import (
     OffsetShapeInput,
     RevolveInput,
     ShellInput,
+    SketchSegment,
     SweepInput,
 )
 
@@ -286,6 +287,51 @@ def _wire_by_index(shape: Any, index: int) -> Any:
         i += 1
         explorer.Next()
     raise IndexError(f"Wire index {index} out of range (shape has {i} wires)")
+
+
+def _sketch_edge(
+    segment: SketchSegment,
+    *,
+    plane: str,
+    origin: tuple[float, float, float],
+) -> Any | None:
+    """Build one OCCT edge without deciding how profile loops are combined."""
+    ox, oy, oz = origin
+
+    def point(coordinates: tuple[float, float]) -> Any:
+        first, second = coordinates
+        if plane == "XZ":
+            return gp_Pnt(ox + first, oy, oz + second)
+        if plane == "YZ":
+            return gp_Pnt(ox, oy + first, oz + second)
+        return gp_Pnt(ox + first, oy + second, oz)
+
+    if segment.type == "line" and segment.start and segment.end:
+        return BRepBuilderAPI_MakeEdge(point(segment.start), point(segment.end)).Edge()
+
+    if segment.type == "circle" and segment.center and segment.radius:
+        cx, cy = segment.center
+        if plane == "XZ":
+            axis = gp_Ax2(gp_Pnt(ox + cx, oy, oz + cy), gp_Dir(0, 1, 0))
+        elif plane == "YZ":
+            axis = gp_Ax2(gp_Pnt(ox, oy + cx, oz + cy), gp_Dir(1, 0, 0))
+        else:
+            axis = gp_Ax2(gp_Pnt(ox + cx, oy + cy, oz), gp_Dir(0, 0, 1))
+        return BRepBuilderAPI_MakeEdge(gp_Circ(axis, segment.radius)).Edge()
+
+    if (
+        segment.type == "arc"
+        and segment.start
+        and segment.end
+        and segment.center
+        and segment.radius
+    ):
+        cx, cy = segment.center
+        midpoint = point((cx, cy + segment.radius))
+        arc = GC_MakeArcOfCircle(point(segment.start), midpoint, point(segment.end)).Value()
+        return BRepBuilderAPI_MakeEdge(arc).Edge()
+
+    return None
 
 
 # ── Topology reference helpers ──────────────────────────────────────
@@ -1167,54 +1213,17 @@ class OcctBackend:
 
         try:
             wire_builder = BRepBuilderAPI_MakeWire()
-            ox, oy, oz = payload.origin
+            hole_builders: list[Any] = []
 
             for seg in payload.segments:
-                if seg.type == "line" and seg.start and seg.end:
-                    p1 = gp_Pnt(ox + seg.start[0], oy + seg.start[1], oz)
-                    p2 = gp_Pnt(ox + seg.end[0], oy + seg.end[1], oz)
-                    if payload.plane == "XZ":
-                        p1 = gp_Pnt(ox + seg.start[0], oy, oz + seg.start[1])
-                        p2 = gp_Pnt(ox + seg.end[0], oy, oz + seg.end[1])
-                    elif payload.plane == "YZ":
-                        p1 = gp_Pnt(ox, oy + seg.start[0], oz + seg.start[1])
-                        p2 = gp_Pnt(ox, oy + seg.end[0], oz + seg.end[1])
-                    edge = BRepBuilderAPI_MakeEdge(p1, p2).Edge()
-                    wire_builder.Add(edge)
-
-                elif seg.type == "circle" and seg.center and seg.radius:
-                    cx, cy = seg.center
-                    r = seg.radius
-                    if payload.plane == "XZ":
-                        ax = gp_Ax2(gp_Pnt(ox + cx, oy, oz + cy), gp_Dir(0, 1, 0))
-                    elif payload.plane == "YZ":
-                        ax = gp_Ax2(gp_Pnt(ox, oy + cx, oz + cy), gp_Dir(1, 0, 0))
-                    else:
-                        ax = gp_Ax2(gp_Pnt(ox + cx, oy + cy, oz), gp_Dir(0, 0, 1))
-                    circ = gp_Circ(ax, r)
-                    edge = BRepBuilderAPI_MakeEdge(circ).Edge()
-                    wire_builder.Add(edge)
-
-                elif seg.type == "arc" and seg.start and seg.end and seg.center and seg.radius:
-                    # Arc via three points: start, mid-point on arc, end
-                    cx, cy = seg.center
-                    r = seg.radius
-                    s = seg.start
-                    e = seg.end
-                    if payload.plane == "XZ":
-                        p1 = gp_Pnt(ox + s[0], oy, oz + s[1])
-                        p2 = gp_Pnt(ox + e[0], oy, oz + e[1])
-                        mid = gp_Pnt(ox + cx, oy, oz + cy + r)
-                    elif payload.plane == "YZ":
-                        p1 = gp_Pnt(ox, oy + s[0], oz + s[1])
-                        p2 = gp_Pnt(ox, oy + e[0], oz + e[1])
-                        mid = gp_Pnt(ox, oy + cx, oz + cy + r)
-                    else:
-                        p1 = gp_Pnt(ox + s[0], oy + s[1], oz)
-                        p2 = gp_Pnt(ox + e[0], oy + e[1], oz)
-                        mid = gp_Pnt(ox + cx, oy + cy + r, oz)
-                    arc = GC_MakeArcOfCircle(p1, mid, p2).Value()
-                    edge = BRepBuilderAPI_MakeEdge(arc).Edge()
+                edge = _sketch_edge(seg, plane=payload.plane, origin=payload.origin)
+                if edge is None:
+                    continue
+                if seg.subtract:
+                    hole_builder = BRepBuilderAPI_MakeWire()
+                    hole_builder.Add(edge)
+                    hole_builders.append(hole_builder)
+                else:
                     wire_builder.Add(edge)
 
             wire_builder.Build()
@@ -1226,18 +1235,43 @@ class OcctBackend:
                     failed_check="wire_build",
                 )
 
-            wire = wire_builder.Wire()
-            # Store the wire as a shape with zero volume
+            native = wire_builder.Wire()
+            if hole_builders:
+                face_builder = BRepBuilderAPI_MakeFace(native)
+                for hole_builder in hole_builders:
+                    hole_builder.Build()
+                    if not hole_builder.IsDone():
+                        return make_failure(
+                            code=ErrorCode.SKETCH_ERROR,
+                            message="Hole wire construction failed.",
+                            suggestion="Check subtractive sketch segments.",
+                            failed_check="hole_wire_build",
+                        )
+                    # Inner loops must oppose the outer loop orientation so
+                    # OCCT treats them as voids rather than additive regions.
+                    hole_wire = TopoDS.Wire_s(hole_builder.Wire().Reversed())
+                    face_builder.Add(hole_wire)
+                face_builder.Build()
+                if not face_builder.IsDone():
+                    return make_failure(
+                        code=ErrorCode.SKETCH_ERROR,
+                        message="Profile face construction failed.",
+                        suggestion="Ensure subtractive loops are closed and inside the outer profile.",
+                        failed_check="profile_face_build",
+                    )
+                native = face_builder.Face()
+
+            # Store the profile as a wire, or as a face when it contains holes.
             shape_id = self._store.new_id("sketch")
-            bbox = _bbox_from_shape(wire)
-            edge_ids = _edge_list(wire, shape_id)
+            bbox = _bbox_from_shape(native)
+            edge_ids = _edge_list(native, shape_id)
             shape = ShapeData(
                 id=shape_id, kind="sketch", parameters=payload.model_dump(),
                 bbox=bbox, volume=0.0, manifold=False,
                 edge_ids=edge_ids, face_ids=[], source_ids=[],
             )
             self._store.add(shape)
-            self._native[shape_id] = wire
+            self._native[shape_id] = native
             return self._success(shape, "create_sketch")
 
         except Exception as exc:
@@ -1260,8 +1294,11 @@ class OcctBackend:
             return self._shape_not_found(payload.sketch_id)
 
         try:
-            # Make a face from the wire, then extrude via CadQuery prism
-            face = BRepBuilderAPI_MakeFace(native).Face()
+            # Holed sketches are already faces; simple profiles remain wires.
+            if native.ShapeType() == TopAbs_FACE:
+                face = TopoDS.Face_s(native)
+            else:
+                face = BRepBuilderAPI_MakeFace(native).Face()
             vec = gp_Vec(0, 0, payload.distance)
             if payload.both:
                 vec_neg = gp_Vec(0, 0, -payload.distance)

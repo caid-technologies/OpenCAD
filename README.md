@@ -206,6 +206,12 @@ opencad build model.json --output model.built.json
 opencad run model.py --export output.step --tree-output output-tree.json
 ```
 
+STEP export uses the native OCCT backend. Install it with
+`uv sync --extra occt`; the CLI's default `--backend auto` mode selects it
+automatically whenever `--export` is requested. The analytic backend can be
+selected explicitly for tree-only validation with `--backend analytic`, but it
+does not produce STEP files.
+
 ## Examples
 
 The [`examples/`](examples/README.md) directory contains end-to-end scripts for common
@@ -216,7 +222,6 @@ device-development workflows:
 - `software_hmi_panel.py` — front panel for an operator interface with button and encoder cutouts
 - `firmware_programmer_fixture.py` — pogo-pin fixture plate for programming/debug access
 - `full_device_cable_grommet.py` — concentric cable grommet built from primitive booleans
-- `examples/agents/generate_mounting_bracket_code.py` — agent code-generation usage example
 
 Run an example from the repository root with:
 
@@ -230,8 +235,6 @@ The agent service generates and executes OpenCAD Python through LiteLLM for ever
 request. Provider and model can be supplied as `llm_provider` and `llm_model`, or configured
 with `OPENCAD_LLM_PROVIDER` and `OPENCAD_LLM_MODEL`. Responses include `generated_code`,
 executed operations, and the updated feature tree.
-
-For a runnable script example, see [`examples/agents/README.md`](examples/agents/README.md).
 
 ## Documentation
 

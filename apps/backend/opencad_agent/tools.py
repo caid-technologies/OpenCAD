@@ -122,7 +122,14 @@ class ToolRuntime:
                 cy = entity.get("cy", entity.get("y"))
                 radius = entity.get("radius")
                 if isinstance(cx, (int, float)) and isinstance(cy, (int, float)) and isinstance(radius, (int, float)):
-                    segments.append({"type": "circle", "center": (float(cx), float(cy)), "radius": float(radius)})
+                    segments.append(
+                        {
+                            "type": "circle",
+                            "center": (float(cx), float(cy)),
+                            "radius": float(radius),
+                            "subtract": bool(entity.get("subtract", False)),
+                        }
+                    )
                 continue
 
             if kind == "line":
