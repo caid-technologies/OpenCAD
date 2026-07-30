@@ -6,6 +6,10 @@ from opencad_agent.models import OperationExecution
 from opencad_agent.tools import ToolRuntime
 
 
+class UnsupportedPromptError(ValueError):
+    """Raised when no deterministic planner or local code template matches a prompt."""
+
+
 class OpenCadPlanner:
     def execute(self, message: str, runtime: ToolRuntime, reasoning: bool = False) -> tuple[str, list[OperationExecution]]:
         lowered = message.lower()
@@ -21,11 +25,10 @@ class OpenCadPlanner:
                 response = "Mounting bracket feature sequence generated and executed."
             return response, operations
 
-        operations = self._build_simple_feature(runtime)
-        response = "Executed a minimal sketch-to-extrude sequence for the request."
-        if reasoning:
-            response = "Plan: create sketch then extrude. Sequence executed with dependency-safe IDs."
-        return response, operations
+        raise UnsupportedPromptError(
+            "Unsupported CAD request. The built-in planner only supports the mounting-bracket workflow. "
+            "Enable Generate Code with a configured OPENCAD_LLM_MODEL for arbitrary requests."
+        )
 
     def _safe_call(
         self,
@@ -42,39 +45,6 @@ class OpenCadPlanner:
             error = {"error": str(exc)}
             operations.append(OperationExecution(tool=tool, status="error", arguments=arguments, result=error))
             raise
-
-    def _build_simple_feature(self, runtime: ToolRuntime) -> list[OperationExecution]:
-        operations: list[OperationExecution] = []
-
-        base_sketch_args = {
-            "name": "Simple Base Sketch",
-            "entities": {
-                "l1": {"id": "l1", "type": "line", "start": (0.0, 0.0), "end": (30.0, 0.0)},
-                "l2": {"id": "l2", "type": "line", "start": (30.0, 0.0), "end": (30.0, 20.0)},
-                "l3": {"id": "l3", "type": "line", "start": (30.0, 20.0), "end": (0.0, 20.0)},
-                "l4": {"id": "l4", "type": "line", "start": (0.0, 20.0), "end": (0.0, 0.0)},
-            },
-            "profile_order": ["l1", "l2", "l3", "l4"],
-            "constraints": [{"id": "d1", "type": "distance", "a": "l1", "value": 30.0}],
-        }
-
-        sketch = self._safe_call(
-            operations,
-            "add_sketch",
-            base_sketch_args,
-            lambda: {"sketch_id": runtime.add_sketch(**base_sketch_args)},
-        )
-        sketch_id = str(sketch["sketch_id"])
-
-        extrude_args = {"sketch_id": sketch_id, "depth": 8.0, "name": "Simple Extrude"}
-        self._safe_call(
-            operations,
-            "extrude",
-            extrude_args,
-            lambda: {"feature_id": runtime.extrude(**extrude_args)},
-        )
-
-        return operations
 
     def _build_mounting_bracket(self, runtime: ToolRuntime) -> list[OperationExecution]:
         operations: list[OperationExecution] = []
@@ -262,12 +232,7 @@ class OpenCadPlanner:
                 ")\n"
             )
 
-        return (
-            '"""Smoke test: rectangle with circular hole."""\n'
-            "from opencad import Part, Sketch\n\n"
-            'rect_profile = Sketch(name="Outer").rect(30, 20)\n'
-            'hole_profile = Sketch(name="Hole").circle(4, center=(15, 10))\n\n'
-            'slab = Part(name="Slab").extrude(rect_profile, depth=8, name="Slab Body")\n'
-            'hole = Part(name="Hole").extrude(hole_profile, depth=8, name="Hole Body")\n'
-            'final = slab.cut(hole, name="Final Part")\n'
+        raise UnsupportedPromptError(
+            "Unsupported code-generation request. The built-in generator only supports mounting brackets "
+            "and PCB carriers. Configure OPENCAD_LLM_MODEL for arbitrary requests."
         )

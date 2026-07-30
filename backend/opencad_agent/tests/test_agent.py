@@ -10,7 +10,7 @@ from opencad_agent.api import app
 from opencad_agent.generated_code import GeneratedCodePolicyError, validate_generated_code
 from opencad_agent.llm import LiteLlmProvider
 from opencad_agent.models import ChatRequest
-from opencad_agent.planner import OpenCadPlanner
+from opencad_agent.planner import OpenCadPlanner, UnsupportedPromptError
 from opencad_agent.prompting import build_code_generation_prompt, build_system_prompt
 from opencad_agent.service import OpenCadAgentService
 from opencad_agent.tools import ToolRuntime
@@ -59,15 +59,36 @@ def test_code_generation_prompt_contains_example_scripts() -> None:
 @pytest.mark.parametrize(
     ("message", "expected"),
     [
-        ("Generate a mounting bracket script", "Generated Mounting Bracket"),
-        ("Generate a PCB carrier script", "Generated PCB Carrier"),
-        ("Generate a simple part", "Generated Part"),
+        ("Generate a mounting bracket script", "Mounting bracket"),
+        ("Generate a PCB carrier script", "PCB carrier"),
     ],
 )
 def test_planner_generate_code_returns_example_style_scripts(message: str, expected: str) -> None:
     code = OpenCadPlanner().generate_code(message)
     assert "from opencad import Part, Sketch" in code
     assert expected in code
+
+
+@pytest.mark.parametrize("generate_code", [False, True])
+def test_chat_api_rejects_unsupported_prompts(generate_code: bool) -> None:
+    client = TestClient(app)
+    payload = {
+        "message": "Build a cog",
+        "tree_state": _seed_tree().model_dump(),
+        "conversation_history": [],
+        "reasoning": False,
+        "generate_code": generate_code,
+    }
+
+    response = client.post("/chat", json=payload)
+
+    assert response.status_code == 422
+    assert "Unsupported" in response.json()["detail"]
+
+
+def test_local_code_generator_raises_for_unsupported_prompt() -> None:
+    with pytest.raises(UnsupportedPromptError, match="Unsupported code-generation request"):
+        OpenCadPlanner().generate_code("Build a cog")
 
 
 def test_mounting_bracket_prompt_generates_minimum_operations() -> None:

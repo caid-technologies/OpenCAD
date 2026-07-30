@@ -7,6 +7,7 @@ vi.mock("axios", () => ({
   default: {
     post: vi.fn(),
     get: vi.fn(),
+    isAxiosError: vi.fn(),
   },
 }));
 
@@ -52,6 +53,21 @@ describe("OpenCadApiClient routes", () => {
     expect(mockedAxios.get).toHaveBeenCalledWith("http://127.0.0.1:8003/kernel/shapes/shape-1/mesh", {
       params: { deflection: 0.2 },
     });
+  });
+
+  it("surfaces an unsupported-prompt detail from the agent API", async () => {
+    const error = { response: { data: { detail: "Unsupported CAD request." } } };
+    mockedAxios.post.mockRejectedValue(error);
+    mockedAxios.isAxiosError.mockReturnValue(true);
+
+    const client = new OpenCadApiClient("http://127.0.0.1:8003", undefined, false, false);
+
+    await expect(client.sendChat({
+      message: "Build a cog",
+      tree_state: { nodes: {}, root_id: "root", active_branch: "main", revision: 0 },
+      conversation_history: [],
+      generate_code: true,
+    })).rejects.toThrow("Unsupported CAD request.");
   });
 
   it("uses custom kernel URL for streaming mesh events", () => {
