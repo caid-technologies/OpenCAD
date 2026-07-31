@@ -243,8 +243,6 @@ class ToolRuntime:
         profile_order: list[str] | None = None,
     ) -> str:
         sketch_id = self._new_sketch_id()
-        parent = self._latest_feature()
-        depends_on = [] if parent == self.tree.root_id else [parent]
         sketch_shape_id: str | None = None
 
         if self._use_live_kernel:
@@ -271,7 +269,6 @@ class ToolRuntime:
                 "profile_order": profile_order or [],
             },
             sketch_id=sketch_id,
-            depends_on=depends_on,
             shape_id=sketch_shape_id,
             status="built",
         )
@@ -301,7 +298,6 @@ class ToolRuntime:
             operation="extrude",
             parameters={"sketch_id": sketch_id, "depth": depth},
             sketch_id=sketch_id,
-            depends_on=[sketch_id],
             shape_id=shape_id,
             status="built",
         )
@@ -310,8 +306,6 @@ class ToolRuntime:
 
     def add_cylinder(self, position: dict[str, float], radius: float, height: float, name: str) -> str:
         feature_id = self._new_feature_id()
-        parent = self._latest_feature()
-        depends_on = [] if parent == self.tree.root_id else [parent]
         shape_id = self._new_shape_id()
 
         resolved = self._try_kernel_call("create_cylinder", {"radius": radius, "height": height})
@@ -323,7 +317,6 @@ class ToolRuntime:
             name=name,
             operation="add_cylinder",
             parameters={"position": position, "radius": radius, "height": height},
-            depends_on=depends_on,
             shape_id=shape_id,
             status="built",
         )

@@ -51,10 +51,14 @@ def test_live_mode_creates_sketch_shape_then_extrudes() -> None:
 
     assert tree.nodes[sketch_id].shape_id is not None
     assert str(tree.nodes[sketch_id].shape_id).startswith("sketch-")
+    assert tree.nodes[sketch_id].parent_id is None
 
     out_shape = tree.nodes[feature_id].shape_id
     assert out_shape is not None
     assert str(out_shape).startswith("extrude-")
+    assert tree.nodes[feature_id].parent_id is None
+    assert tree.nodes[feature_id].sketch_id == sketch_id
+    assert tree.nodes[feature_id].depends_on == [sketch_id]
 
 
 def test_profile_order_controls_segment_order() -> None:

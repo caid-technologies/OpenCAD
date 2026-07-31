@@ -22,6 +22,10 @@ def test_fluent_sketch_extrude_fillet_rejects_analytic_step_export(tmp_path: Pat
     assert part.shape_id is not None
     assert sketch.feature_id is not None
     assert len(ctx.tree.nodes) >= 3  # root + sketch + feature chain
+    extrude = next(node for node in ctx.tree.nodes.values() if node.operation == "extrude")
+    assert extrude.parent_id is None
+    assert extrude.sketch_id == sketch.feature_id
+    assert extrude.depends_on == [sketch.feature_id]
 
 
 def test_fluent_boolean_chain_records_dependencies() -> None:

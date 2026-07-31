@@ -80,4 +80,17 @@ describe("viewport feature visibility", () => {
     expect([...getHighlightedViewportShapeIds(screw, "head", visible)]).toEqual(["shape-relief"]);
     expect([...getHighlightedViewportShapeIds(screw, "independent", visible)]).toEqual(["shape-independent"]);
   });
+
+  it("renders the component rather than its consumed sketch mesh", () => {
+    const model = tree([
+      node("profile", null, [], { operation: "create_sketch", sketch_id: "profile" }),
+      node("body", null, [], {
+        operation: "extrude",
+        sketch_id: "profile",
+        depends_on: ["profile"],
+      }),
+    ]);
+
+    expect([...getViewportShapeIds(model)]).toEqual(["shape-body"]);
+  });
 });

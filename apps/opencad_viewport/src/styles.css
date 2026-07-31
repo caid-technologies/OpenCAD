@@ -83,6 +83,35 @@ body {
   letter-spacing: 0.02em;
 }
 
+.tree-section + .tree-section {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #e8edf4;
+}
+
+.tree-section-row {
+  color: #475569;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.tree-section-label {
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tree-section-count {
+  min-width: 18px;
+  margin-left: auto;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #edf1f7;
+  font-size: 0.65rem;
+  text-align: center;
+}
+
 .tree-toggle {
   width: 14px;
   cursor: pointer;
