@@ -318,6 +318,7 @@ async def stream_mesh(
                     "vertices": mesh.vertices,
                     "faces": mesh.faces,
                     "normals": mesh.normals,
+                    "face_groups": [group.model_dump() for group in mesh.face_groups],
                     "faceIndex": face_idx,
                     "totalFaces": total,
                     "done": face_idx == total - 1,

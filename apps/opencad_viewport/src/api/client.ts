@@ -6,6 +6,7 @@ import type {
   CadFileFormat,
   CadImportResult,
   FeatureTreeView,
+  MeshFaceGroup,
   MeshPayload,
   SketchPayload,
   SolverResult,
@@ -16,6 +17,7 @@ export interface MeshStreamChunk {
   vertices: number[];
   faces: number[];
   normals: number[];
+  face_groups: MeshFaceGroup[];
   faceIndex: number;
   totalFaces: number;
   done: boolean;

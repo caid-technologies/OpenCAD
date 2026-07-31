@@ -5,6 +5,7 @@ import { CadFileToolbar } from "./components/CadFileToolbar";
 import { FeatureTreePanel } from "./components/FeatureTreePanel";
 import { SketchEditor } from "./components/SketchEditor";
 import { Viewport3D } from "./components/Viewport3D";
+import { getHighlightedViewportShapeIds, getViewportShapeIds } from "./featureVisibility";
 import { mockMeshes } from "./mock/mockData";
 import { sketchFromNode } from "./sketchData";
 import { createEmptyTree } from "./types";
@@ -66,7 +67,16 @@ export default function App(): JSX.Element {
   const selectedShapeId = tree.nodes[selectedNodeId]?.shape_id ?? null;
   const selectedNode = tree.nodes[selectedNodeId] ?? null;
   const selectedSketch = useMemo(() => sketchFromNode(selectedNode), [selectedNode]);
+  const viewportShapeIds = useMemo(() => getViewportShapeIds(tree), [tree]);
+  const highlightedShapeIds = useMemo(
+    () => getHighlightedViewportShapeIds(tree, selectedNodeId, viewportShapeIds),
+    [selectedNodeId, tree, viewportShapeIds],
+  );
   const loadedShapeIds = useMemo(() => new Set(meshes.map((mesh) => mesh.shapeId)), [meshes]);
+  const viewportMeshes = useMemo(
+    () => meshes.filter((mesh) => viewportShapeIds.has(mesh.shapeId)),
+    [meshes, viewportShapeIds],
+  );
 
   useEffect(() => {
     const missingShapeNodes = Object.values(tree.nodes).filter(
@@ -74,6 +84,7 @@ export default function App(): JSX.Element {
         node.status === "built"
         && !node.suppressed
         && Boolean(node.shape_id)
+        && viewportShapeIds.has(node.shape_id as string)
         && !loadedShapeIds.has(node.shape_id as string),
     );
 
@@ -105,7 +116,7 @@ export default function App(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [api, loadedShapeIds, tree]);
+  }, [api, loadedShapeIds, tree, viewportShapeIds]);
 
   return (
     <div className="app-shell">
@@ -159,8 +170,9 @@ export default function App(): JSX.Element {
           }}
         />
         <Viewport3D
-          meshes={meshes}
+          meshes={viewportMeshes}
           selectedShapeId={selectedShapeId}
+          highlightedShapeIds={highlightedShapeIds}
           onSelectShape={(shapeId) => {
             const node = Object.values(tree.nodes).find((item) => item.shape_id === shapeId);
             if (node) {

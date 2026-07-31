@@ -4,10 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BufferAttribute, BufferGeometry, EdgesGeometry } from "three";
 import type { MeshPayload } from "../types";
 import type { MeshStreamChunk, OpenCadApiClient } from "../api/client";
+import { getMeshMaterialGroups } from "../meshHighlight";
 
 interface Viewport3DProps {
   meshes: MeshPayload[];
   selectedShapeId?: string | null;
+  highlightedShapeIds?: ReadonlySet<string>;
   onSelectShape?: (shapeId: string) => void;
   /** Optional: provide the API client to enable SSE streaming. */
   apiClient?: OpenCadApiClient;
@@ -29,10 +31,12 @@ function toUint32(values: number[] | Uint32Array): Uint32Array {
 function MeshItem({
   mesh,
   selected,
+  selectedOwnerShapeId,
   onSelect
 }: {
   mesh: MeshPayload;
   selected: boolean;
+  selectedOwnerShapeId?: string | null;
   onSelect?: (shapeId: string) => void;
 }): JSX.Element {
   const [hovered, setHovered] = useState(false);
@@ -49,8 +53,16 @@ function MeshItem({
     } else {
       g.computeVertexNormals();
     }
+    for (const group of getMeshMaterialGroups(
+      indices.length,
+      mesh.face_groups,
+      selectedOwnerShapeId,
+      selected,
+    )) {
+      g.addGroup(group.start, group.count, group.materialIndex);
+    }
     return g;
-  }, [mesh.faces, mesh.normals, mesh.vertices]);
+  }, [mesh.face_groups, mesh.faces, mesh.normals, mesh.vertices, selected, selectedOwnerShapeId]);
 
   const edgeGeometry = useMemo(() => new EdgesGeometry(geometry), [geometry]);
 
@@ -61,7 +73,9 @@ function MeshItem({
     };
   }, [edgeGeometry, geometry]);
 
-  const color = selected ? "#1f6feb" : hovered ? "#8aa2bf" : "#9ca3af";
+  const color = hovered ? "#8aa2bf" : "#9ca3af";
+  const hasSubsetHighlight = geometry.groups.some((group) => group.materialIndex === 1)
+    && geometry.groups.some((group) => group.materialIndex === 0);
 
   return (
     <group>
@@ -80,10 +94,11 @@ function MeshItem({
           onSelect?.(mesh.shapeId);
         }}
       >
-        <meshStandardMaterial color={color} flatShading metalness={0.1} roughness={0.75} />
+        <meshStandardMaterial attach="material-0" color={color} flatShading metalness={0.1} roughness={0.75} />
+        <meshStandardMaterial attach="material-1" color="#1f6feb" flatShading metalness={0.1} roughness={0.75} />
       </mesh>
       <lineSegments geometry={edgeGeometry}>
-        <lineBasicMaterial color={selected ? "#0b4ea2" : "#5f6774"} />
+        <lineBasicMaterial color={selected && !hasSubsetHighlight ? "#0b4ea2" : "#5f6774"} />
       </lineSegments>
     </group>
   );
@@ -97,11 +112,13 @@ function StreamingMeshItem({
   shapeId,
   apiClient,
   selected,
+  selectedOwnerShapeId,
   onSelect,
 }: {
   shapeId: string;
   apiClient: OpenCadApiClient;
   selected: boolean;
+  selectedOwnerShapeId?: string | null;
   onSelect?: (shapeId: string) => void;
 }): JSX.Element | null {
   const [hovered, setHovered] = useState(false);
@@ -110,14 +127,15 @@ function StreamingMeshItem({
   const [, forceUpdate] = useState(0);
 
   // Accumulate chunks into flat arrays
-  const accum = useRef<{ verts: number[]; faces: number[]; norms: number[] }>({
+  const accum = useRef<{ verts: number[]; faces: number[]; norms: number[]; faceGroups: NonNullable<MeshPayload["face_groups"]> }>({
     verts: [],
     faces: [],
     norms: [],
+    faceGroups: [],
   });
 
   useEffect(() => {
-    accum.current = { verts: [], faces: [], norms: [] };
+    accum.current = { verts: [], faces: [], norms: [], faceGroups: [] };
     const controller = new AbortController();
 
     apiClient.streamMesh(
@@ -126,11 +144,15 @@ function StreamingMeshItem({
         if (chunk.error) return;
 
         const vertOffset = accum.current.verts.length / 3;
+        const faceOffset = accum.current.faces.length;
         accum.current.verts.push(...chunk.vertices);
         accum.current.norms.push(...chunk.normals);
         // Offset face indices by the current vertex count
         for (const idx of chunk.faces) {
           accum.current.faces.push(idx + vertOffset);
+        }
+        for (const group of chunk.face_groups ?? []) {
+          accum.current.faceGroups.push({ ...group, start: group.start + faceOffset });
         }
 
         // Rebuild geometry
@@ -167,7 +189,18 @@ function StreamingMeshItem({
 
   if (!geometryRef.current) return null;
 
-  const color = selected ? "#1f6feb" : hovered ? "#8aa2bf" : "#9ca3af";
+  geometryRef.current.clearGroups();
+  for (const group of getMeshMaterialGroups(
+    geometryRef.current.index?.count ?? 0,
+    accum.current.faceGroups,
+    selectedOwnerShapeId,
+    selected,
+  )) {
+    geometryRef.current.addGroup(group.start, group.count, group.materialIndex);
+  }
+  const color = hovered ? "#8aa2bf" : "#9ca3af";
+  const hasSubsetHighlight = geometryRef.current.groups.some((group) => group.materialIndex === 1)
+    && geometryRef.current.groups.some((group) => group.materialIndex === 0);
 
   return (
     <group>
@@ -177,18 +210,23 @@ function StreamingMeshItem({
         onPointerOut={(event) => { event.stopPropagation(); setHovered(false); }}
         onPointerDown={(event) => { event.stopPropagation(); onSelect?.(shapeId); }}
       >
-        <meshStandardMaterial color={color} flatShading metalness={0.1} roughness={0.75} />
+        <meshStandardMaterial attach="material-0" color={color} flatShading metalness={0.1} roughness={0.75} />
+        <meshStandardMaterial attach="material-1" color="#1f6feb" flatShading metalness={0.1} roughness={0.75} />
       </mesh>
       {edgeGeomRef.current && (
         <lineSegments geometry={edgeGeomRef.current}>
-          <lineBasicMaterial color={selected ? "#0b4ea2" : "#5f6774"} />
+          <lineBasicMaterial color={selected && !hasSubsetHighlight ? "#0b4ea2" : "#5f6774"} />
         </lineSegments>
       )}
     </group>
   );
 }
 
-export function Viewport3D({ meshes, selectedShapeId, onSelectShape, apiClient, useStreaming }: Viewport3DProps): JSX.Element {
+export function Viewport3D({ meshes, selectedShapeId, highlightedShapeIds, onSelectShape, apiClient, useStreaming }: Viewport3DProps): JSX.Element {
+  const isSelected = useCallback(
+    (shapeId: string) => highlightedShapeIds?.has(shapeId) ?? shapeId === selectedShapeId,
+    [highlightedShapeIds, selectedShapeId],
+  );
   // Collect unique shape IDs for streaming mode
   const streamShapeIds = useMemo(() => {
     if (!useStreaming || !apiClient) return [];
@@ -209,7 +247,8 @@ export function Viewport3D({ meshes, selectedShapeId, onSelectShape, apiClient, 
                 key={id}
                 shapeId={id}
                 apiClient={apiClient}
-                selected={id === selectedShapeId}
+                selected={isSelected(id)}
+                selectedOwnerShapeId={selectedShapeId}
                 onSelect={onSelectShape}
               />
             ))
@@ -217,7 +256,8 @@ export function Viewport3D({ meshes, selectedShapeId, onSelectShape, apiClient, 
               <MeshItem
                 key={mesh.shapeId}
                 mesh={mesh}
-                selected={mesh.shapeId === selectedShapeId}
+                selected={isSelected(mesh.shapeId)}
+                selectedOwnerShapeId={selectedShapeId}
                 onSelect={onSelectShape}
               />
             ))}

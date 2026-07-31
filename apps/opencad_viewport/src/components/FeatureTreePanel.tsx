@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { projectFeatureTree } from "../featureTreeProjection";
 import type { FeatureNodeView, FeatureTreeView } from "../types";
 
 interface FeatureTreePanelProps {
@@ -26,33 +27,10 @@ function opIcon(operation: string): string {
 }
 
 export function FeatureTreePanel({ tree, selectedNodeId, onSelectNode }: FeatureTreePanelProps): JSX.Element {
-  const { roots, childrenByParent } = useMemo(() => {
-    const children: Record<string, string[]> = {};
-    Object.keys(tree.nodes).forEach((nodeId) => {
-      children[nodeId] = [];
-    });
-
-    const rootCandidates: string[] = [];
-
-    Object.entries(tree.nodes).forEach(([nodeId, node]) => {
-      if (!node.parent_id) {
-        rootCandidates.push(nodeId);
-      } else {
-        if (!children[node.parent_id]) {
-          children[node.parent_id] = [];
-        }
-        children[node.parent_id].push(nodeId);
-      }
-    });
-
-    Object.values(children).forEach((ids) => ids.sort());
-    rootCandidates.sort();
-
-    return {
-      roots: rootCandidates,
-      childrenByParent: children
-    };
-  }, [tree.nodes]);
+  const { roots, childrenByParent, toolBranchesByNode } = useMemo(
+    () => projectFeatureTree(tree),
+    [tree],
+  );
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ [tree.root_id]: true });
 
@@ -92,8 +70,11 @@ export function FeatureTreePanel({ tree, selectedNodeId, onSelectNode }: Feature
   const renderNode = (nodeId: string, depth: number): JSX.Element => {
     const node: FeatureNodeView = tree.nodes[nodeId];
     const childIds = childrenByParent[nodeId] ?? [];
-    const hasChildren = childIds.length > 0;
+    const toolBranches = toolBranchesByNode[nodeId] ?? [];
+    const hasChildren = childIds.length > 0 || toolBranches.length > 0;
     const isExpanded = expanded[nodeId] ?? depth < 1;
+    const toolsKey = `tools:${nodeId}`;
+    const toolsExpanded = expanded[toolsKey] ?? true;
 
     return (
       <div key={nodeId}>
@@ -119,6 +100,24 @@ export function FeatureTreePanel({ tree, selectedNodeId, onSelectNode }: Feature
           </button>
         </div>
         {isExpanded ? childIds.map((childId) => renderNode(childId, depth + 1)) : null}
+        {isExpanded && toolBranches.length > 0 ? (
+          <div>
+            <div className="tree-row tree-tool-group" style={{ paddingLeft: `${(depth + 1) * 14 + 10}px` }}>
+              <button
+                type="button"
+                className="tree-toggle"
+                aria-label={toolsExpanded ? "Collapse tools" : "Expand tools"}
+                onClick={() => toggle(toolsKey)}
+              >
+                {toolsExpanded ? "-" : "+"}
+              </button>
+              <span className="tree-tool-folder">Tools</span>
+            </div>
+            {toolsExpanded
+              ? toolBranches.map(({ rootId }) => renderNode(rootId, depth + 2))
+              : null}
+          </div>
+        ) : null}
       </div>
     );
   };

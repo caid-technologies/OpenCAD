@@ -71,6 +71,18 @@ body {
   color: inherit;
 }
 
+.tree-tool-group {
+  color: #64748b;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.tree-tool-folder {
+  font-size: 0.76rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
 .tree-toggle {
   width: 14px;
   cursor: pointer;

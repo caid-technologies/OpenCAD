@@ -182,6 +182,33 @@ def test_tessellate_box(backend):
     assert len(mesh.vertices) % 3 == 0
     # Each face is 3 indices
     assert len(mesh.faces) % 3 == 0
+    assert len(mesh.face_groups) == 6
+    assert sum(group.count for group in mesh.face_groups) == len(mesh.faces)
+    assert {group.owner_shape_id for group in mesh.face_groups} == {box.shape_id}
+
+
+def test_tessellation_preserves_boolean_and_fillet_face_owners(backend):
+    from opencad_kernel.core.models import Success
+    from opencad_kernel.operations.schemas import BooleanInput, CreateCylinderInput, FilletEdgesInput
+
+    shank = backend.create_cylinder(CreateCylinderInput(radius=3.0, height=30.0))
+    head = backend.create_cylinder(CreateCylinderInput(radius=7.0, height=5.0))
+    assert isinstance(shank, Success) and shank.shape_id
+    assert isinstance(head, Success) and head.shape_id
+
+    body = backend.boolean_union(BooleanInput(shape_a_id=shank.shape_id, shape_b_id=head.shape_id))
+    assert isinstance(body, Success) and body.shape_id and body.shape
+    relief = backend.fillet_edges(FilletEdgesInput(
+        shape_id=body.shape_id,
+        edge_ids=body.shape.edge_ids,
+        radius=0.5,
+    ))
+    assert isinstance(relief, Success) and relief.shape_id
+
+    owners = {group.owner_shape_id for group in backend.tessellate(relief.shape_id).face_groups}
+    assert shank.shape_id in owners
+    assert head.shape_id in owners
+    assert relief.shape_id in owners
 
 
 def test_tessellate_cylinder(backend):
@@ -238,6 +265,8 @@ def test_tessellate_face_streaming(backend):
     for i in range(total):
         mesh_chunk, t = backend.tessellate_face(box.shape_id, i, deflection=0.1)
         assert t == total
+        assert len(mesh_chunk.face_groups) == 1
+        assert mesh_chunk.face_groups[0].owner_shape_id == box.shape_id
         all_verts.extend(mesh_chunk.vertices)
 
     # Full tessellation should have the same vertex data
