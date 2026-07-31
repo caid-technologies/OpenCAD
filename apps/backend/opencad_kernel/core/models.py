@@ -23,12 +23,22 @@ class BoundingBox(BaseModel):
         return dx * dy * dz
 
 
+class MeshFaceGroup(BaseModel):
+    """Contiguous triangle-index range belonging to one modeling feature."""
+
+    start: int
+    count: int
+    face_index: int
+    owner_shape_id: str
+
+
 class MeshData(BaseModel):
     """Tessellated mesh representation — mirrors the frontend MeshPayload."""
 
     vertices: list[float] = Field(default_factory=list)
     faces: list[int] = Field(default_factory=list)
     normals: list[float] = Field(default_factory=list)
+    face_groups: list[MeshFaceGroup] = Field(default_factory=list)
 
 
 # ── Topology naming ─────────────────────────────────────────────────

@@ -54,7 +54,15 @@ export interface MeshPayload {
   vertices: number[] | Float32Array;
   faces: number[] | Uint32Array;
   normals?: number[] | Float32Array;
+  face_groups?: MeshFaceGroup[];
   name?: string;
+}
+
+export interface MeshFaceGroup {
+  start: number;
+  count: number;
+  face_index: number;
+  owner_shape_id: string;
 }
 
 export type CadFileFormat = "step" | "stp" | "stl";
