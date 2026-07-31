@@ -79,26 +79,27 @@ class RuntimeContext:
                     self._sketch_counter = max(self._sketch_counter, int(tail) + 1)
 
     def execute_operation(
-    self,
-    operation: str,
-    payload: dict[str, Any],
-    *,
-    feature_name: str,
-    parent_id: str | None = None,
-    tool_refs: list[str] | None = None,
-    tree_parameters: dict[str, Any] | None = None,
-    feature_id: str | None = None,
-    depends_on: list[str] | None = None,  # back-compat shim
-) -> tuple[str, str]:
+        self,
+        operation: str,
+        payload: dict[str, Any],
+        *,
+        feature_name: str,
+        parent_id: str | None = None,
+        tool_refs: list[str] | None = None,
+        sketch_id: str | None = None,
+        tree_parameters: dict[str, Any] | None = None,
+        feature_id: str | None = None,
+        depends_on: list[str] | None = None,  # back-compat shim
+    ) -> tuple[str, str]:
         """Execute a kernel operation and append a built feature node."""
         # Migration shim: if a caller still passes depends_on, derive roles
         # positionally — first entry is the lineage parent, rest are tool refs.
         if depends_on is not None and parent_id is None and tool_refs is None:
             parent_id = depends_on[0] if depends_on else None
             tool_refs = list(depends_on[1:])
-    
+
         tool_refs = tool_refs or []
-    
+
         if self._external_kernel_call is not None:
             response = self._external_kernel_call(operation, payload)
         else:
@@ -121,9 +122,9 @@ class RuntimeContext:
             parameters=params,
             parent_id=parent_id,
             tool_refs=tool_refs,
+            sketch_id=node_id if operation == "create_sketch" else sketch_id,
             shape_id=str(shape_id),
             status="built",
-            sketch_id=node_id if operation == "create_sketch" else None,
         )
         self.tree = FeatureTreeService.add_feature(self.tree, node)
         self.last_feature_id = node_id

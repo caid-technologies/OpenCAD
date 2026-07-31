@@ -98,6 +98,64 @@ def test_serialization_roundtrip() -> None:
     assert set(restored.nodes.keys()) == set(tree.nodes.keys())
 
 
+def test_sketch_reference_is_a_dependency_but_not_body_parent() -> None:
+    node = FeatureNode(
+        id="extrude",
+        name="Extrude",
+        operation="extrude",
+        sketch_id="profile",
+    )
+
+    assert node.parent_id is None
+    assert node.tool_refs == []
+    assert node.depends_on == ["profile"]
+
+
+def test_legacy_sketch_parent_is_migrated_to_profile_dependency() -> None:
+    node = FeatureNode.model_validate({
+        "id": "extrude",
+        "name": "Extrude",
+        "operation": "extrude",
+        "sketch_id": "profile",
+        "parent_id": "profile",
+        "tool_refs": [],
+        "depends_on": ["profile"],
+    })
+
+    assert node.parent_id is None
+    assert node.depends_on == ["profile"]
+
+
+def test_editing_separate_sketch_stales_consuming_component() -> None:
+    tree = FeatureTree(
+        root_id="profile",
+        nodes={
+            "profile": FeatureNode(
+                id="profile",
+                name="Profile",
+                operation="create_sketch",
+                sketch_id="profile",
+                status="built",
+                shape_id="shape-profile",
+            ),
+            "extrude": FeatureNode(
+                id="extrude",
+                name="Body",
+                operation="extrude",
+                sketch_id="profile",
+                status="built",
+                shape_id="shape-body",
+            ),
+        },
+    )
+
+    updated = FeatureTreeService.edit_feature(tree, "profile", {"segments": []})
+
+    assert updated.nodes["profile"].status == "stale"
+    assert updated.nodes["extrude"].status == "stale"
+    assert updated.nodes["extrude"].parent_id is None
+
+
 def test_delete_with_dependents_errors() -> None:
     tree = _build_12_node_tree()
     with pytest.raises(ValueError, match="dependents"):

@@ -27,28 +27,30 @@ class Part:
         return self.feature_id, self.shape_id
 
     def _apply(
-    self,
-    operation: str,
-    payload: dict,
-    *,
-    feature_name: str,
-    parent_id: str | None = None,
-    tool_refs: list[str] | None = None,
-    tree_parameters: dict | None = None,
-    # back-compat shim during migration:
-    depends_on: list[str] | None = None,
-) -> Self:
+        self,
+        operation: str,
+        payload: dict,
+        *,
+        feature_name: str,
+        parent_id: str | None = None,
+        tool_refs: list[str] | None = None,
+        sketch_id: str | None = None,
+        tree_parameters: dict | None = None,
+        # back-compat shim during migration:
+        depends_on: list[str] | None = None,
+    ) -> Self:
         # If a caller still passes depends_on, treat first as parent, rest as tools.
         if depends_on is not None and parent_id is None and tool_refs is None:
             parent_id = depends_on[0] if depends_on else None
             tool_refs = list(depends_on[1:])
-    
+
         feature_id, shape_id = self._context.execute_operation(
             operation,
             payload,
             feature_name=feature_name,
             parent_id=parent_id,
             tool_refs=tool_refs or [],
+            sketch_id=sketch_id,
             tree_parameters=tree_parameters,
         )
         self.feature_id = feature_id
@@ -103,7 +105,7 @@ class Part:
             "extrude",
             {"sketch_id": sketch_shape_id, "distance": depth, "both": both},
             feature_name=name,
-            depends_on=[sketch.feature_id],
+            sketch_id=sketch.feature_id,
             tree_parameters={"sketch_id": sketch.feature_id, "distance": depth, "both": both},
         )
 

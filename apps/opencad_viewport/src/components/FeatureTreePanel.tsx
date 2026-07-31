@@ -27,7 +27,7 @@ function opIcon(operation: string): string {
 }
 
 export function FeatureTreePanel({ tree, selectedNodeId, onSelectNode }: FeatureTreePanelProps): JSX.Element {
-  const { roots, childrenByParent, toolBranchesByNode } = useMemo(
+  const { roots, sketches, childrenByParent, toolBranchesByNode } = useMemo(
     () => projectFeatureTree(tree),
     [tree],
   );
@@ -122,10 +122,36 @@ export function FeatureTreePanel({ tree, selectedNodeId, onSelectNode }: Feature
     );
   };
 
+  const renderSection = (key: string, label: string, nodeIds: string[]): JSX.Element | null => {
+    if (nodeIds.length === 0) return null;
+    const sectionKey = `section:${key}`;
+    const isExpanded = expanded[sectionKey] ?? true;
+    return (
+      <div className="tree-section" key={sectionKey}>
+        <div className="tree-row tree-section-row">
+          <button
+            type="button"
+            className="tree-toggle"
+            aria-label={isExpanded ? `Collapse ${label}` : `Expand ${label}`}
+            onClick={() => toggle(sectionKey)}
+          >
+            {isExpanded ? "-" : "+"}
+          </button>
+          <span className="tree-section-label">{label}</span>
+          <span className="tree-section-count">{nodeIds.length}</span>
+        </div>
+        {isExpanded ? nodeIds.map((nodeId) => renderNode(nodeId, 1)) : null}
+      </div>
+    );
+  };
+
   return (
     <aside className="feature-tree-panel">
       <div className="panel-header">Feature Tree</div>
-      <div className="panel-body">{roots.map((nodeId) => renderNode(nodeId, 0))}</div>
+      <div className="panel-body">
+        {renderSection("components", "Components", roots)}
+        {renderSection("sketches", "Sketches", sketches)}
+      </div>
     </aside>
   );
 }

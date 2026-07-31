@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import { projectFeatureTree } from "./featureTreeProjection";
 import type { FeatureNodeView, FeatureTreeView } from "./types";
 
-function node(id: string, parentId: string | null = null, toolRefs: string[] = []): FeatureNodeView {
+function node(
+  id: string,
+  parentId: string | null = null,
+  toolRefs: string[] = [],
+  overrides: Partial<FeatureNodeView> = {},
+): FeatureNodeView {
   return {
     id,
     name: id,
@@ -17,6 +22,7 @@ function node(id: string, parentId: string | null = null, toolRefs: string[] = [
     shape_id: `shape-${id}`,
     status: "built",
     suppressed: false,
+    ...overrides,
   };
 }
 
@@ -38,6 +44,7 @@ describe("feature tree projection", () => {
     ]));
 
     expect(projection.roots).toEqual(["cube"]);
+    expect(projection.sketches).toEqual([]);
     expect(projection.childrenByParent.cube).toEqual(["cut"]);
     expect(projection.toolBranchesByNode.cut).toEqual([
       { referenceId: "sphere", rootId: "sphere" },
@@ -66,5 +73,19 @@ describe("feature tree projection", () => {
     ]));
 
     expect(projection.roots).toEqual(["body"]);
+  });
+
+  it("separates sketches and promotes their consuming extrusion to a component root", () => {
+    const projection = projectFeatureTree(tree([
+      node("root", null, [], { operation: "seed", shape_id: null }),
+      node("profile", "root", [], { operation: "create_sketch", sketch_id: "profile" }),
+      node("body", "profile", [], { operation: "extrude", sketch_id: "profile" }),
+      node("fillet", "body"),
+    ]));
+
+    expect(projection.sketches).toEqual(["profile"]);
+    expect(projection.roots).toEqual(["body"]);
+    expect(projection.childrenByParent.body).toEqual(["fillet"]);
+    expect(projection.childrenByParent.profile).toEqual([]);
   });
 });

@@ -1,4 +1,5 @@
 import type { FeatureTreeView } from "./types";
+import { isSketchNode } from "./sketchData";
 
 export interface ToolBranchReference {
   referenceId: string;
@@ -7,6 +8,7 @@ export interface ToolBranchReference {
 
 export interface FeatureTreeProjection {
   roots: string[];
+  sketches: string[];
   childrenByParent: Record<string, string[]>;
   toolBranchesByNode: Record<string, ToolBranchReference[]>;
 }
@@ -21,10 +23,24 @@ export function projectFeatureTree(tree: FeatureTreeView): FeatureTreeProjection
     toolBranchesByNode[nodeId] = [];
   }
 
+  const isComponentFeature = (nodeId: string): boolean => {
+    const node = tree.nodes[nodeId];
+    return Boolean(node) && !isSketchNode(node) && node.operation !== "seed";
+  };
+
+  const displayParentByNode: Record<string, string | null> = {};
   for (const [nodeId, node] of Object.entries(tree.nodes)) {
-    if (node.parent_id && tree.nodes[node.parent_id]) {
-      childrenByParent[node.parent_id].push(nodeId);
+    if (!isComponentFeature(nodeId)) continue;
+    let parentId = node.parent_id;
+    const visited = new Set<string>([nodeId]);
+    while (parentId && tree.nodes[parentId] && !visited.has(parentId)) {
+      visited.add(parentId);
+      if (isComponentFeature(parentId)) break;
+      parentId = tree.nodes[parentId].parent_id;
     }
+    const displayParent = parentId && isComponentFeature(parentId) ? parentId : null;
+    displayParentByNode[nodeId] = displayParent;
+    if (displayParent) childrenByParent[displayParent].push(nodeId);
   }
 
   const lineageRoot = (startId: string): string => {
@@ -32,8 +48,8 @@ export function projectFeatureTree(tree: FeatureTreeView): FeatureTreeProjection
     const visited = new Set<string>();
     while (!visited.has(currentId)) {
       visited.add(currentId);
-      const parentId = tree.nodes[currentId]?.parent_id;
-      if (!parentId || !tree.nodes[parentId]) return currentId;
+      const parentId = displayParentByNode[currentId];
+      if (!parentId) return currentId;
       currentId = parentId;
     }
     return startId;
@@ -41,10 +57,11 @@ export function projectFeatureTree(tree: FeatureTreeView): FeatureTreeProjection
 
   const consumedToolRoots = new Set<string>();
   for (const [nodeId, node] of Object.entries(tree.nodes)) {
+    if (!isComponentFeature(nodeId)) continue;
     const consumerRootId = lineageRoot(nodeId);
     const seenRoots = new Set<string>();
     for (const referenceId of node.tool_refs) {
-      if (!tree.nodes[referenceId]) continue;
+      if (!isComponentFeature(referenceId)) continue;
       const rootId = lineageRoot(referenceId);
       if (seenRoots.has(rootId)) continue;
       seenRoots.add(rootId);
@@ -58,11 +75,14 @@ export function projectFeatureTree(tree: FeatureTreeView): FeatureTreeProjection
     a.rootId.localeCompare(b.rootId),
   ));
 
-  const roots = Object.entries(tree.nodes)
-    .filter(([, node]) => !node.parent_id || !tree.nodes[node.parent_id])
-    .map(([nodeId]) => nodeId)
+  const roots = Object.keys(tree.nodes)
+    .filter((nodeId) => isComponentFeature(nodeId) && !displayParentByNode[nodeId])
     .filter((nodeId) => !consumedToolRoots.has(nodeId))
     .sort();
+  const sketches = Object.entries(tree.nodes)
+    .filter(([, node]) => isSketchNode(node))
+    .map(([nodeId]) => nodeId)
+    .sort();
 
-  return { roots, childrenByParent, toolBranchesByNode };
+  return { roots, sketches, childrenByParent, toolBranchesByNode };
 }
