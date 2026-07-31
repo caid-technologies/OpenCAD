@@ -1,4 +1,4 @@
-# Contributing
+# Contribution
 
 ## Development Setup
 
