@@ -1,5 +1,78 @@
 # Architecture
 
+## Core / Backend Boundary
+
+The core is a separate distribution from the backend, not just a separate
+directory. OpenCAD is a uv workspace of three Python packages:
+
+| Distribution | Location | Ships | Depends on |
+|--------------|----------|-------|------------|
+| `opencad` | `packages/opencad` | `opencad`, `opencad.kernel`, `opencad.solver`, `opencad.tree` | pydantic, numpy |
+| `opencad-agent` | `packages/opencad-agent` | `opencad_agent` | `opencad`; `[llm]` adds LiteLLM |
+| `opencad-backend` | `apps/backend` | `opencad_server` | `opencad`, `opencad-agent[llm]`, FastAPI, httpx, uvicorn |
+
+The dependency arrow runs core ← agent ← backend and never reverses. `pip
+install opencad` gets you a working geometry kernel, solver, feature tree,
+fluent API, and CLI with no web framework anywhere in the environment.
+
+Two mechanisms keep it that way:
+
+1. `apps/backend/tests/test_core_boundary.py` parses every non-test module in
+   the core packages and fails on any import of `fastapi`, `starlette`,
+   `httpx`, `uvicorn`, `sse_starlette`, `dotenv`, or `opencad_server`.
+2. CI runs a job per package with `uv sync --package <name>`, so each test
+   suite executes with only that package's own dependencies installed. A core
+   module that reaches for the backend fails to import, not just to lint.
+
+### Backend contents (`apps/backend/src/opencad_server`)
+
+- `app.py` — aggregate app; mounts every router under `/kernel`, `/agent`, `/solver`, `/tree`
+- `kernel_router.py`, `solver_router.py`, `tree_router.py`, `agent_router.py`
+  — one router per service, each also exposing `create_app()` and a module-level
+  `app` for standalone deployment
+- `api_app.py` — shared FastAPI factory with production CORS/docs defaults
+- `http_kernel_client.py` — the only outbound HTTP client to the kernel
+
+### Kernel access contract
+
+Core code that needs the kernel depends on the `KernelClient` protocol in
+`opencad/kernel/client.py`, never on a transport:
+
+```python
+class KernelClient(Protocol):
+    def call_operation(self, operation: str, params: dict) -> dict: ...
+    def get_topology(self, shape_id: str) -> dict: ...
+    def get_mesh(self, shape_id: str, deflection: float = 0.1) -> dict: ...
+```
+
+Two implementations exist:
+
+- `opencad.kernel.client.LocalKernelClient` — in-process, backed by an
+  `OperationRegistry`. Used by `RuntimeContext`, the CLI, and tests.
+- `opencad_server.http_kernel_client.HttpKernelClient` — remote, backed by httpx.
+  Selected in `agent_router.py` and `tree_router.py` when
+  `OPENCAD_AGENT_LIVE_KERNEL` or `OPENCAD_TREE_LIVE_KERNEL` is true.
+
+`RuntimeContext`, `OpenCadAgentService`, and `ToolRuntime` all accept a
+`kernel_client`; the choice of transport is made once, at the composition root.
+
+### Agent ← core direction
+
+The core knows nothing about the agent. Driving a `RuntimeContext` with the LLM
+lives in the agent package as `opencad_agent.run_chat(context, message)`, which
+calls back into the core's public surface (`context.kernel_client`,
+`context.adopt_tree`). There is no lazy `import opencad_agent` inside `opencad`.
+
+## Geometry Backend Boundary
+
+- `opencad.kernel.operations.handlers.OpenCadKernel` is the stable coordinator used by the registry and public APIs.
+- Geometry is implemented behind `KernelBackend`; the coordinator contains no geometry algorithms.
+- `opencad.kernel.core.occt_backend.OcctBackend` owns production B-rep construction, topology, file I/O, and tessellation.
+- `opencad.kernel.core.analytic_backend.AnalyticBackend` owns the metadata-only approximation used by lightweight and isolated tests.
+- Assembly mates and the shared topology selector stay in the coordinator because they are application-level behavior rather than geometry-engine behavior.
+- Every operation-log entry records the concrete backend class that executed it, allowing snapshots and diagnostics to distinguish analytic results from OCCT results.
+- Face-by-face mesh streaming is tracked separately through the optional `StreamingMeshBackend` capability.
+
 ## 4 – Viewport Application (`opencad_viewport`)
 
 ### Frontend Components
@@ -23,7 +96,6 @@
   - Prompt input + send flow
   - Streaming assistant response rendering
   - Operation execution list with per-step status
-  - `High Reasoning` toggle
 
 ### Data Contracts
 
@@ -42,7 +114,7 @@
 
 ### Mock-First Development
 
-The viewport client (`src/api/client.ts`) defaults viewport geometry/solver flows to mock mode via `VITE_USE_MOCK`.
+The viewport client (`src/api/client.ts`) uses live geometry/solver flows by default; mock mode is opt-in via `VITE_USE_MOCK=true`.
 Chat uses the live agent service by default, with an opt-in mocked chat path via `VITE_USE_CHAT_MOCK=true`.
 
 ### Storybook Coverage
@@ -72,10 +144,8 @@ Chat uses the live agent service by default, with an opt-in mocked chat path via
     - `message: str`
     - `tree_state: FeatureTree`
     - `conversation_history: []`
-    - `reasoning: bool`
     - `llm_provider: str | null` (optional, for LiteLLM-backed code generation)
     - `llm_model: str | null` (optional, for LiteLLM-backed code generation)
-    - `generate_code: bool` (optional, returns example-style Python instead of executing tools)
   - Output:
     - `response: str`
     - `generated_code: str | null`
@@ -99,12 +169,9 @@ Chat uses the live agent service by default, with an opt-in mocked chat path via
     - `add_cylinder`
     - `get_tree_state`
     - `get_shape_info`
-- `planner.py`
-  - Sequence planning + deterministic execution path
-  - Includes a mission prompt path for mounting bracket generation (8+ operations)
 - `service.py`
-  - Request orchestration and response assembly
-  - Optional LiteLLM-backed code generation path for multi-provider responses
+  - Always generates OpenCAD code through LiteLLM
+  - Validates, repairs once when needed, executes, and returns the updated tree
 
 ## Cross-Service Integration
 
@@ -134,7 +201,7 @@ OpenCAD now supports a headless mode where kernel, tree, and fluent API calls ex
   - Executes operations without inter-service HTTP
   - Tracks latest feature and shape IDs for fluent chaining
   - Supports tree serialization/deserialization and in-process rebuild
-  - Exposes `chat()` that runs `OpenCadAgentService` in-process via injected kernel calls
+  - Exposes `kernel_client` and `adopt_tree()` so `opencad_agent.run_chat()` can drive it in-process
 
 ### Fluent API
 
@@ -155,7 +222,7 @@ Every fluent call appends a `FeatureNode` to the active tree branch.
 
 ### In-Process Agent Geometry Path
 
-When `ToolRuntime` has an injected kernel call (single-process mode), it now:
+When `ToolRuntime` has an injected `KernelClient` (single-process mode), it now:
 
 - Converts supported sketch entities to `create_sketch` segments
 - Calls kernel `extrude` against the created sketch shape when available
@@ -184,8 +251,8 @@ This path is intended for script-first workflows where users want Build123d-like
 
 ### Pluggable Solver Backend
 
-The solver service (`opencad_solver`) uses a backend abstraction (`SolverBackend` ABC
-in `opencad_solver/backend.py`) to decouple constraint-solving logic from the API layer.
+The solver service (`opencad.solver`) uses a backend abstraction (`SolverBackend` ABC
+in `opencad/solver/backend.py`) to decouple constraint-solving logic from the API layer.
 
 - **PythonSolverBackend** (default) — NumPy/SciPy Gauss-Newton with numerical Jacobian.
 - **SolveSpaceBackend** — delegates to SolveSpace via `python-solvespace` bindings.
@@ -230,9 +297,8 @@ Requires topology reference stability. See [TOPOLOGY.md](TOPOLOGY.md) for:
 
 ## Validation Coverage
 
-- 5 tests in `opencad_agent/tests/test_agent.py` verify:
+- `opencad_agent/tests/test_agent.py` verifies:
   - system prompt completeness
-  - mounting bracket prompt creates >=8 valid operations
-  - operation references use existing IDs
-  - reasoning toggle changes response style
+  - fixed low-temperature, non-reasoning LLM settings
+  - generated-code policy and execution
   - API round-trip and health endpoint

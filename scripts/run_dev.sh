@@ -3,13 +3,17 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BACKEND_DIR="$ROOT_DIR/backend"
-FRONTEND_DIR="$ROOT_DIR/opencad_viewport"
+BACKEND_DIR="$ROOT_DIR/apps/backend"
+FRONTEND_DIR="$ROOT_DIR/apps/opencad_viewport"
 
 BACKEND_HOST="${BACKEND_HOST:-127.0.0.1}"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 FRONTEND_HOST="${FRONTEND_HOST:-127.0.0.1}"
 FRONTEND_PORT="${FRONTEND_PORT:-5173}"
+OPENCAD_TREE_LIVE_KERNEL="${OPENCAD_TREE_LIVE_KERNEL:-true}"
+OPENCAD_KERNEL_URL="${OPENCAD_KERNEL_URL:-http://$BACKEND_HOST:$BACKEND_PORT/kernel}"
+
+export OPENCAD_TREE_LIVE_KERNEL OPENCAD_KERNEL_URL
 
 if [[ ! -d "$BACKEND_DIR" ]]; then
   echo "Backend directory not found: $BACKEND_DIR" >&2
@@ -43,15 +47,15 @@ trap cleanup EXIT INT TERM
 
 echo "Starting backend on http://$BACKEND_HOST:$BACKEND_PORT"
 (
-  cd "$BACKEND_DIR"
-  uv run --no-sync python -m uvicorn api:app --reload --host "$BACKEND_HOST" --port "$BACKEND_PORT"
+  cd "$ROOT_DIR"
+  uv run --package opencad-backend --extra occt python -m uvicorn opencad_server.app:app --reload --host "$BACKEND_HOST" --port "$BACKEND_PORT"
 ) &
 backend_pid=$!
 
 echo "Starting frontend on http://$FRONTEND_HOST:$FRONTEND_PORT"
 (
   cd "$FRONTEND_DIR"
-  pnpm dev -- --host "$FRONTEND_HOST" --port "$FRONTEND_PORT"
+  pnpm dev --host "$FRONTEND_HOST" --port "$FRONTEND_PORT"
 ) &
 frontend_pid=$!
 

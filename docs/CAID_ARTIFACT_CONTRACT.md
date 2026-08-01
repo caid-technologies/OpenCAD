@@ -17,7 +17,7 @@ Required top-level fields:
 {
   "schema_version": 1,
   "artifact_id": "simcorrect-problem1-forearm",
-  "producer": {"name": "opencad", "version": "0.1.1"},
+  "producer": {"name": "opencad", "version": "0.2.0"},
   "created_at": "2026-04-24T00:00:00Z",
   "feature_tree": {"root_id": "root", "nodes": {}},
   "parameters": {},
@@ -94,4 +94,4 @@ The first validated slice is SimCorrect Problem 1:
 - SimCorrect target: `link2_length`
 - Expected patch: `forearm_length` from `0.25` to `0.30`
 
-OpenCAD covers this with `backend/opencad/tests/test_caid_golden_loop.py`. SimCorrect covers the corresponding fixture with `tests/test_golden_loop_fixture.py`.
+OpenCAD covers this with `packages/opencad/tests/runtime/test_caid_golden_loop.py`. SimCorrect covers the corresponding fixture with `tests/test_golden_loop_fixture.py`.

@@ -123,7 +123,7 @@ expect_contains "tree get" "$tree_get" '"root_id":"smoke-root"'
 
 # ── Agent ──────────────────────────────────────────────────────────
 
-agent_chat_payload='{"message":"Create a simple feature","tree_state":{"root_id":"smoke-root","nodes":{"smoke-root":{"id":"smoke-root","name":"Root","operation":"root","parameters":{},"depends_on":[],"status":"built"}}},"conversation_history":[],"reasoning":false}'
+agent_chat_payload='{"message":"Create a simple feature","tree_state":{"root_id":"smoke-root","nodes":{"smoke-root":{"id":"smoke-root","name":"Root","operation":"root","parameters":{},"depends_on":[],"status":"built"}}},"conversation_history":[]}'
 agent_chat="$(http_post_json "$BASE_AGENT/chat" "$agent_chat_payload")"
 expect_contains "agent chat" "$agent_chat" '"operations_executed"'
 

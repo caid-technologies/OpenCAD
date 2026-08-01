@@ -1,0 +1,6 @@
+# pnpm workspace mirroring the Python layout:
+#   packages/*  publishable libraries
+#   apps/*      applications that consume them (not published)
+packages:
+  - "packages/opencad-viewport"
+  - "apps/opencad_viewport"

@@ -6,6 +6,16 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 
+[manifest]
+members = [
+    "opencad",
+    "opencad-agent",
+    "opencad-backend",
+]
+
+[manifest.dependency-groups]
+test = [{ name = "pytest", specifier = ">=8" }]
+
 [[package]]
 name = "aiohappyeyeballs"
 version = "2.6.1"
@@ -1955,40 +1965,37 @@ wheels = [
 
 [[package]]
 name = "opencad"
-version = "0.1.1"
-source = { editable = "." }
+version = "0.2.0"
+source = { editable = "packages/opencad" }
 dependencies = [
-    { name = "fastapi" },
-    { name = "httpx" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pydantic" },
-    { name = "python-dotenv" },
 ]
 
 [package.optional-dependencies]
 full = [
     { name = "cadquery" },
     { name = "cadquery-ocp" },
-    { name = "litellm" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "openai" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "sse-starlette" },
-    { name = "uvicorn" },
 ]
-llm = [
-    { name = "litellm" },
+graph = [
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 occt = [
     { name = "cadquery" },
     { name = "cadquery-ocp" },
 ]
-server = [
-    { name = "uvicorn" },
+solver = [
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
+
+[package.dev-dependencies]
 test = [
     { name = "pytest" },
 ]
@@ -1999,22 +2006,89 @@ requires-dist = [
     { name = "cadquery", marker = "extra == 'occt'", specifier = ">=2.4" },
     { name = "cadquery-ocp", marker = "extra == 'full'", specifier = ">=7.7" },
     { name = "cadquery-ocp", marker = "extra == 'occt'", specifier = ">=7.7" },
+    { name = "networkx", marker = "extra == 'full'", specifier = ">=3" },
+    { name = "networkx", marker = "extra == 'graph'", specifier = ">=3" },
+    { name = "numpy", specifier = ">=2" },
+    { name = "pydantic", specifier = ">=2" },
+    { name = "scipy", marker = "extra == 'full'", specifier = ">=1.12" },
+    { name = "scipy", marker = "extra == 'solver'", specifier = ">=1.12" },
+]
+provides-extras = ["occt", "solver", "graph", "full"]
+
+[package.metadata.requires-dev]
+test = [{ name = "pytest", specifier = ">=8" }]
+
+[[package]]
+name = "opencad-agent"
+version = "0.2.0"
+source = { editable = "packages/opencad-agent" }
+dependencies = [
+    { name = "opencad" },
+    { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+llm = [
+    { name = "litellm" },
+]
+
+[package.dev-dependencies]
+test = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "litellm", marker = "extra == 'llm'", specifier = ">=1.82.1" },
+    { name = "opencad", editable = "packages/opencad" },
+    { name = "pydantic", specifier = ">=2" },
+]
+provides-extras = ["llm"]
+
+[package.metadata.requires-dev]
+test = [{ name = "pytest", specifier = ">=8" }]
+
+[[package]]
+name = "opencad-backend"
+version = "0.2.0"
+source = { editable = "apps/backend" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "opencad" },
+    { name = "opencad-agent", extra = ["llm"] },
+    { name = "python-dotenv" },
+    { name = "uvicorn" },
+]
+
+[package.optional-dependencies]
+occt = [
+    { name = "opencad", extra = ["occt"] },
+]
+stream = [
+    { name = "sse-starlette" },
+]
+
+[package.dev-dependencies]
+test = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
     { name = "fastapi", specifier = ">=0.100" },
     { name = "httpx", specifier = ">=0.27" },
-    { name = "litellm", marker = "extra == 'full'", specifier = ">=1.82.1" },
-    { name = "litellm", marker = "extra == 'llm'", specifier = ">=1.82.1" },
-    { name = "networkx", marker = "extra == 'full'", specifier = ">=3" },
-    { name = "numpy", specifier = ">=2" },
-    { name = "openai", marker = "extra == 'full'", specifier = ">=1.40" },
-    { name = "pydantic", specifier = ">=2" },
-    { name = "pytest", marker = "extra == 'test'", specifier = ">=8" },
+    { name = "opencad", editable = "packages/opencad" },
+    { name = "opencad", extras = ["occt"], marker = "extra == 'occt'", editable = "packages/opencad" },
+    { name = "opencad-agent", extras = ["llm"], editable = "packages/opencad-agent" },
     { name = "python-dotenv", specifier = ">=1.0" },
-    { name = "scipy", marker = "extra == 'full'", specifier = ">=1.12" },
-    { name = "sse-starlette", marker = "extra == 'full'", specifier = ">=2.0" },
-    { name = "uvicorn", marker = "extra == 'full'", specifier = ">=0.30" },
-    { name = "uvicorn", marker = "extra == 'server'", specifier = ">=0.30" },
+    { name = "sse-starlette", marker = "extra == 'stream'", specifier = ">=2.0" },
+    { name = "uvicorn", specifier = ">=0.30" },
 ]
-provides-extras = ["test", "server", "llm", "occt", "full"]
+provides-extras = ["occt", "stream"]
+
+[package.metadata.requires-dev]
+test = [{ name = "pytest", specifier = ">=8" }]
 
 [[package]]
 name = "packaging"
