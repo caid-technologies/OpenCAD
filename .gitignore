@@ -18,11 +18,14 @@ venv/
 
 # Node artifacts
 node_modules/
-opencad_viewport/node_modules/
-opencad_viewport/dist/
-opencad_viewport/.storybook-out/
+apps/opencad_viewport/node_modules/
+apps/opencad_viewport/dist/
+packages/opencad-viewport/node_modules/
+packages/opencad-viewport/dist/
+apps/opencad_viewport/.storybook-out/
+.vite/
 package-lock.json
-opencad_viewport/package-lock.json
+apps/opencad_viewport/package-lock.json
 
 # Local environment and secrets
 .env

@@ -8,26 +8,54 @@ on:
       - feature/**
 
 jobs:
-  python:
-    name: Python
+  # Each package is synced with ONLY its own dependencies and tested from its
+  # own directory. A core package that reaches for the backend fails here.
+  package:
+    name: ${{ matrix.package }}
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: opencad
+            directory: packages/opencad
+          - package: opencad-agent
+            directory: packages/opencad-agent
+          - package: opencad-backend
+            directory: apps/backend
+    env:
+      OPENCAD_KERNEL_BACKEND: analytic
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - uses: astral-sh/setup-uv@v5
-      - name: Install Python dependencies
-        run: uv sync --extra test --extra server
-      - name: Run Python tests
+      - name: Install ${{ matrix.package }} only
+        run: uv sync --package ${{ matrix.package }} --group test
+      - name: Run ${{ matrix.package }} tests
+        working-directory: ${{ matrix.directory }}
+        run: uv run --no-sync --package ${{ matrix.package }} --project ../.. python -m pytest
+
+  workspace:
+    name: Workspace
+    runs-on: windows-latest
+    env:
+      OPENCAD_KERNEL_BACKEND: analytic
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v5
+      - name: Install all workspace packages
+        run: uv sync --all-packages --group test
+      - name: Run full suite
         run: uv run --no-sync python -m pytest
 
   viewport:
     name: Viewport
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: opencad_viewport
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -37,10 +65,17 @@ jobs:
         with:
           node-version: "20"
           cache: pnpm
-          cache-dependency-path: opencad_viewport/pnpm-lock.yaml
-      - name: Install frontend dependencies
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-      - name: Run frontend tests
-        run: pnpm test
-      - name: Build frontend
-        run: pnpm build
+      - name: Test the component library
+        run: pnpm --filter opencad-viewport test
+      - name: Build the component library
+        run: pnpm --filter opencad-viewport build
+      - name: Build the reference app against it
+        run: pnpm --filter opencad-viewport-app build
+      # Catches a broken exports map, a missing README/LICENSE, or dist
+      # files that were never built before publish.
+      - name: Verify the publishable tarball
+        working-directory: packages/opencad-viewport
+        run: npm pack --dry-run

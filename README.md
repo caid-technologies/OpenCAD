@@ -4,22 +4,42 @@ A modular CAD system for parametric, programmable, and AI-assisted design
 
 ## Components
 
-- `opencad_kernel` — geometry kernel and typed operation registry
-- `opencad_solver` — 2D sketch constraint solving (SolveSpace + Python fallback)
-- `opencad_tree` — parametric feature-tree DAG (CRUD + rebuild + stale propagation)
+- `opencad.kernel` — geometry kernel and typed operation registry
+- `opencad.solver` — 2D sketch constraint solving (SolveSpace + Python fallback)
+- `opencad.tree` — parametric feature-tree DAG (CRUD + rebuild + stale propagation)
 - `opencad_agent` — AI agent that plans and executes operations
-- `opencad_viewport` — React + Three.js viewport UI (mock mode by default)
+- `opencad_server` — FastAPI transport mounting all of the above
+- `opencad-viewport` — publishable React + Three.js component library (npm)
 
 ## Layout
 
+This is a uv workspace of three Python distributions and a pnpm workspace
+holding one npm package, all independently installable. The core carries no
+web framework: the dependency arrow runs core ← agent ← backend and never the
+other way. Applications under `apps/` are never published; they consume the
+libraries under `packages/`.
+
 ```text
-opencad_kernel/      # 1 – Geometry Kernel
-opencad_solver/      # 2 – Constraint Solver
-opencad_tree/        # 3 – Feature Tree
-opencad_viewport/    # 4 – 3D Viewport (frontend)
-opencad_agent/       # 5 – AI Chat Agent
-scripts/             # Backend smoke tests
+packages/
+├── opencad/             # dist: opencad — kernel, solver, tree, fluent API, CLI
+│   ├── src/             #   pydantic + numpy only. No FastAPI, no httpx.
+│   └── tests/
+├── opencad-agent/       # dist: opencad-agent — LLM modelling on the core
+│   ├── src/             #   depends on opencad; [llm] extra adds LiteLLM
+│   └── tests/
+└── opencad-viewport/    # npm: opencad-viewport — React component library
+    └── src/             #   react/three are peer deps, never bundled
+apps/
+├── backend/             # dist: opencad-backend — the only FastAPI consumer
+│   ├── src/             #   opencad_server: routers, app factory, HTTP client
+│   └── tests/
+└── opencad_viewport/    # reference app hosting the components (not published)
+scripts/                 # Development and smoke-test scripts
 ```
+
+Each package installs and tests on its own; CI runs a job per package with
+only that package's dependencies present, so a core module that reaches for
+the backend fails the build.
 
 ## Quickstart
 
@@ -27,44 +47,48 @@ scripts/             # Backend smoke tests
 
 ### 1. Install
 
-For a packaged install (for example from a wheel or a PyPI release), use:
+For a packaged install, pick the layer you need — each is independent:
 
 ```bash
-uv pip install opencad
+uv pip install "opencad[occt]"        # core only: kernel, solver, tree, fluent API
+uv pip install "opencad-agent[llm]"   # + natural-language modelling
+uv pip install opencad-backend        # + the FastAPI HTTP service
 ```
 
 For local development from this repository:
 
 ```bash
-uv sync --extra test --extra server
+uv sync --all-packages --all-extras --group test
 cp .env.example .env
 ```
 
-Install optional integrations as needed, for example:
+To work on one package in isolation, sync only its dependencies:
 
 ```bash
-uv sync --extra occt
-uv sync --extra llm
-uv sync --extra full
+uv sync --package opencad --group test          # core alone, no web stack
+uv sync --package opencad-agent --group test    # core + agent
+uv sync --package opencad-backend --group test  # everything
 ```
 
 ### 2. Start backend services
 
-Each service runs on its own port:
-
 ```bash
-cd backend
-uv run --no-sync python -m uvicorn api:app --reload --port 8000
+uv run --package opencad-backend --extra occt \
+  python -m uvicorn opencad_server.app:app --reload --port 8000
 ```
+
+`opencad_server.app` mounts every service router under one process. To run a
+single service standalone, point uvicorn at its router module instead — for
+example `opencad_server.kernel_router:app` or `opencad_server.solver_router:app`.
 
 ### Run the dev script
 
 To start the backend and frontend together from the repository root:
 
 ```bash
-cd opencad_viewport
+cd apps/opencad_viewport
 pnpm install
-cd ..
+cd ../..
 ./scripts/run_dev.sh
 ```
 
@@ -72,6 +96,8 @@ This starts:
 
 - backend: `http://127.0.0.1:8000`
 - frontend: `http://127.0.0.1:5173`
+
+The launcher syncs the backend server, LLM, and OCCT dependencies before startup.
 
 Press `Ctrl+C` to stop both services.
 
@@ -93,9 +119,9 @@ curl -s http://127.0.0.1:8000/tree/healthz
 ### 4. Start the frontend
 
 ```bash
-cd opencad_viewport
-pnpm install
-pnpm dev                                 # → http://localhost:5173
+pnpm install                             # from the repository root
+pnpm --filter opencad-viewport build     # build the component library first
+pnpm --filter opencad-viewport-app dev   # → http://localhost:5173
 ```
 
 The viewport uses **mock geometry/solver data** by default (no backend required for those flows).
@@ -108,13 +134,14 @@ Build the backend image from the repository root so Docker can see the Python
 project metadata and backend package files:
 
 ```bash
-docker build -f backend/Dockerfile -t opencad-backend .
+docker build -f apps/backend/Dockerfile -t opencad-backend .
 ```
 
-Build the frontend image from the viewport directory:
+Build the frontend image from the repository root too — the app depends on the
+`opencad-viewport` workspace library:
 
 ```bash
-docker build -f opencad_viewport/Dockerfile -t opencad-frontend opencad_viewport
+docker build -f apps/opencad_viewport/Dockerfile -t opencad-frontend .
 ```
 
 Run the backend API on port `8000`:
@@ -135,12 +162,12 @@ mock mode, pass build args:
 
 ```bash
 docker build \
-  -f opencad_viewport/Dockerfile \
+  -f apps/opencad_viewport/Dockerfile \
   -t opencad-frontend \
   --build-arg VITE_BASE_URL=http://localhost:8000 \
   --build-arg VITE_USE_MOCK=false \
   --build-arg VITE_USE_CHAT_MOCK=false \
-  opencad_viewport
+  .
 ```
 
 ## Configuration
@@ -162,8 +189,19 @@ See `SECURITY.md` for coordinated vulnerability reporting.
 
 ## Testing
 
+Run the whole workspace:
+
 ```bash
+uv sync --all-packages --group test
 uv run --no-sync python -m pytest
+```
+
+Or test one package with only its own dependencies installed — this is what CI
+does, and it is what keeps the core independent of the backend:
+
+```bash
+uv sync --package opencad --group test
+cd packages/opencad && uv run --no-sync --package opencad --project ../.. python -m pytest
 ```
 
 ## Headless Scripting
@@ -208,6 +246,12 @@ opencad build model.json --output model.built.json
 opencad run model.py --export output.step --tree-output output-tree.json
 ```
 
+STEP export uses the native OCCT backend. Install it with
+`uv sync --extra occt`; the CLI's default `--backend auto` mode selects it
+automatically whenever `--export` is requested. The analytic backend can be
+selected explicitly for tree-only validation with `--backend analytic`, but it
+does not produce STEP files.
+
 ## Examples
 
 The [`examples/`](examples/README.md) directory contains end-to-end scripts for common
@@ -218,7 +262,6 @@ device-development workflows:
 - `software_hmi_panel.py` — front panel for an operator interface with button and encoder cutouts
 - `firmware_programmer_fixture.py` — pogo-pin fixture plate for programming/debug access
 - `full_device_cable_grommet.py` — concentric cable grommet built from primitive booleans
-- `examples/agents/generate_mounting_bracket_code.py` — agent code-generation usage example
 
 Run an example from the repository root with:
 
@@ -228,12 +271,10 @@ python -m opencad.cli run examples/hardware_mounting_bracket.py \
   --tree-output bracket-tree.json
 ```
 
-The agent service can also generate example-style Python scripts for different LLM providers
-through LiteLLM by posting `llm_provider`, `llm_model`, and `generate_code=true` to `/chat`.
-When `generate_code` is enabled, the response includes `generated_code` and leaves the feature
-tree unchanged.
-
-For a runnable script example, see [`examples/agents/README.md`](examples/agents/README.md).
+The agent service generates and executes OpenCAD Python through LiteLLM for every `/chat`
+request. Provider and model can be supplied as `llm_provider` and `llm_model`, or configured
+with `OPENCAD_LLM_PROVIDER` and `OPENCAD_LLM_MODEL`. Responses include `generated_code`,
+executed operations, and the updated feature tree.
 
 ## Documentation
 
