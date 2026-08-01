@@ -8,6 +8,7 @@ from opencad import (
     ParameterPatch,
     Part,
     Sketch,
+    __version__,
     apply_design_patch,
     load_design_artifact,
     reset_default_context,
@@ -40,7 +41,9 @@ def test_part_exports_caid_design_artifact(tmp_path: Path) -> None:
     artifact = load_design_artifact(output)
 
     assert artifact.schema_version == 1
-    assert artifact.producer["version"] == "0.1.1"
+    # Track the package version rather than a literal — a hardcoded string
+    # here fails on every release bump for no real coverage gain.
+    assert artifact.producer == {"name": "opencad", "version": __version__}
     assert artifact.parameters["forearm_length"].value == 0.30
     assert artifact.parameter_values() == {"forearm_length": 0.30}
     assert len(artifact.simulation_tags) == 2

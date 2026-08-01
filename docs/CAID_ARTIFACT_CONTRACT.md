@@ -17,7 +17,7 @@ Required top-level fields:
 {
   "schema_version": 1,
   "artifact_id": "simcorrect-problem1-forearm",
-  "producer": {"name": "opencad", "version": "0.1.1"},
+  "producer": {"name": "opencad", "version": "0.2.0"},
   "created_at": "2026-04-24T00:00:00Z",
   "feature_tree": {"root_id": "root", "nodes": {}},
   "parameters": {},
