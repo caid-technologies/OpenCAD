@@ -1,85 +1,33 @@
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
+# Virtual workspace root. There is no package here — every distribution lives
+# in a workspace member:
+#
+#   packages/opencad         core geometry kernel, solver, tree, fluent API
+#   packages/opencad-agent   LLM agent, depends on the core
+#   apps/backend             FastAPI transport, depends on both
+#
+# Sync everything for development:  uv sync --all-packages --group test
+# Run the full suite:               uv run --all-packages python -m pytest
 
-[project]
-name = "opencad"
-version = "0.1.1"
-description = "Modular CAD platform — kernel, solver, feature tree, viewport, and AI agent"
-readme = "README.md"
-license = "MIT"
-requires-python = ">=3.10"
-dependencies = [
-  "pydantic>=2",
-  "fastapi>=0.100",
-  "httpx>=0.27",
-  "numpy>=2",
-  "python-dotenv>=1.0",
+[tool.uv.workspace]
+members = [
+  "packages/opencad",
+  "packages/opencad-agent",
+  "apps/backend",
 ]
 
-[project.scripts]
-opencad = "opencad.cli:main"
+[tool.uv.sources]
+opencad = { workspace = true }
+opencad-agent = { workspace = true }
 
-[project.optional-dependencies]
+[dependency-groups]
 test = [
   "pytest>=8",
 ]
-server = [
-  "uvicorn>=0.30",
-  "litellm>=1.82.1",
-]
-llm = [
-  "litellm>=1.82.1",
-]
-occt = [
-  "cadquery>=2.4",
-  "cadquery-ocp>=7.7",
-]
-full = [
-  "scipy>=1.12",
-  "networkx>=3",
-  "openai>=1.40",
-  "litellm>=1.82.1",
-  "cadquery>=2.4",
-  "cadquery-ocp>=7.7",
-  "sse-starlette>=2.0",
-  "uvicorn>=0.30",
-]
 
 [tool.pytest.ini_options]
-pythonpath = ["apps/backend"]
 testpaths = [
-  "apps/backend/opencad/tests",
-  "apps/backend/opencad_kernel/tests",
-  "apps/backend/opencad_solver/tests",
-  "apps/backend/opencad_tree/tests",
-  "apps/backend/opencad_agent/tests",
+  "packages/opencad/tests",
+  "packages/opencad-agent/tests",
   "apps/backend/tests",
 ]
 addopts = "-q"
-
-[tool.setuptools]
-package-dir = {"" = "apps/backend"}
-
-[tool.setuptools.packages.find]
-where = ["apps/backend"]
-namespaces = false
-include = [
-  "opencad*",
-  "opencad_kernel*",
-  "opencad_solver*",
-  "opencad_tree*",
-  "opencad_agent*",
-]
-exclude = [
-  "opencad.tests",
-  "opencad.tests.*",
-  "opencad_kernel.tests",
-  "opencad_kernel.tests.*",
-  "opencad_solver.tests",
-  "opencad_solver.tests.*",
-  "opencad_tree.tests",
-  "opencad_tree.tests.*",
-  "opencad_agent.tests",
-  "opencad_agent.tests.*",
-]

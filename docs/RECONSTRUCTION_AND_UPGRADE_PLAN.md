@@ -3,6 +3,14 @@
 Date: 2026-04-24
 Release target: 0.1.1
 
+> **Superseded layout.** This note records the repository as it stood on
+> 2026-04-24, when all Python packages lived under `apps/backend/`. The core has
+> since been split into standalone distributions under `packages/`, and the
+> HTTP layer into `opencad-backend` (`opencad_server`). See
+> [ARCHITECTURE.md](../ARCHITECTURE.md) for the current structure and
+> [CHANGELOG.md](../CHANGELOG.md) for the migration. The analysis below still
+> stands; only the paths and commands are out of date.
+
 This note records what was reconstructed locally, what the system is strong at, where it is weak, and where CAID can upgrade it into a useful CAD/simulation platform instead of a demo-shaped codebase.
 
 ## Local Reconstruction Status

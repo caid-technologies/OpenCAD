@@ -8,10 +8,13 @@ __pycache__
 *.py[cod]
 *.egg-info
 
+**/__pycache__
+**/*.py[cod]
+**/build
+**/.pytest_cache
+
 apps/backend/.env
-apps/backend/__pycache__
-apps/backend/**/*.py[cod]
-apps/backend/**/__pycache__
+packages/**/.env
 
 apps/opencad_viewport/.env
 apps/opencad_viewport/node_modules

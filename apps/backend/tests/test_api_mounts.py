@@ -8,36 +8,36 @@ from pathlib import Path
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
 
+ROUTER_MODULES = {
+    "kernel_router": "/healthz",
+    "agent_router": "/chat",
+    "solver_router": "/sketch/solve",
+    "tree_router": "/trees",
+}
 
-def _make_stub_package(name: str, endpoint: str) -> tuple[types.ModuleType, types.ModuleType]:
-    package = types.ModuleType(name)
-    api_module = types.ModuleType(f"{name}.api")
 
+def _make_stub_router_module(name: str, endpoint: str) -> types.ModuleType:
+    module = types.ModuleType(f"opencad_server.{name}")
     router = APIRouter()
 
     @router.get(endpoint)
     def _stub() -> dict[str, str]:
         return {"module": name}
 
-    api_module.router = router
-    package.api = api_module
-    return package, api_module
+    module.router = router
+    return module
 
 
 def test_backend_api_mounts_namespaced_routes(monkeypatch) -> None:
-    stubs = {
-        "opencad_kernel": _make_stub_package("opencad_kernel", "/healthz"),
-        "opencad_agent": _make_stub_package("opencad_agent", "/chat"),
-        "opencad_solver": _make_stub_package("opencad_solver", "/sketch/solve"),
-        "opencad_tree": _make_stub_package("opencad_tree", "/trees"),
-    }
+    import opencad_server
 
-    for package_name, (package_module, api_module) in stubs.items():
-        monkeypatch.setitem(sys.modules, package_name, package_module)
-        monkeypatch.setitem(sys.modules, f"{package_name}.api", api_module)
+    for name, endpoint in ROUTER_MODULES.items():
+        stub = _make_stub_router_module(name, endpoint)
+        monkeypatch.setitem(sys.modules, f"opencad_server.{name}", stub)
+        monkeypatch.setattr(opencad_server, name, stub, raising=False)
 
-    api_path = Path(__file__).resolve().parents[1] / "api.py"
-    spec = importlib.util.spec_from_file_location("backend_api_under_test", api_path)
+    app_path = Path(opencad_server.__file__).resolve().parent / "app.py"
+    spec = importlib.util.spec_from_file_location("backend_app_under_test", app_path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

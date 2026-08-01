@@ -5,24 +5,28 @@ Internal implementation details belong in architecture docs or source comments.
 
 ## Services
 
-- 1 — `opencad_kernel.api` (default port `8000`)
+All HTTP services ship in the `opencad-backend` distribution as
+`opencad_server`. Run them together via `opencad_server.app:app`, or one at a
+time by pointing uvicorn at an individual router module.
+
+- 1 — `opencad_server.kernel_router` (default port `8000`)
   - `GET /healthz`
   - `GET /operations`
   - `GET /operations/{name}/schema`
   - `POST /operations/{name}`
   - Operations include: `create_assembly_mate`, `delete_assembly_mate`, `list_assembly_mates`
-- 2 — `opencad_solver.api` (default port `8001`)
+- 2 — `opencad_server.solver_router` (default port `8001`)
   - `GET /healthz`
   - `GET /backend` — active solver backend and capabilities
   - `POST /sketch/solve`
   - `POST /sketch/check`
   - `POST /sketch/diagnose` — constraint-graph introspection (DOF, Jacobian, mappings)
   - Backend selection: `OPENCAD_SOLVER_BACKEND=solvespace|python|auto`
-- 3 — `opencad_tree.api` (default port `8002`)
+- 3 — `opencad_server.tree_router` (default port `8002`)
   - `GET /healthz`
   - tree CRUD + rebuild + serialize/deserialize
   - Assembly mate nodes: `is_assembly_mate=true` with bidirectional stale propagation
-- 5 — `opencad_agent.api` (default port `8003`)
+- 5 — `opencad_server.agent_router` (default port `8003`)
   - `GET /healthz`
   - `POST /chat`
 

@@ -8,8 +8,37 @@ on:
       - feature/**
 
 jobs:
-  python:
-    name: Python
+  # Each package is synced with ONLY its own dependencies and tested from its
+  # own directory. A core package that reaches for the backend fails here.
+  package:
+    name: ${{ matrix.package }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: opencad
+            directory: packages/opencad
+          - package: opencad-agent
+            directory: packages/opencad-agent
+          - package: opencad-backend
+            directory: apps/backend
+    env:
+      OPENCAD_KERNEL_BACKEND: analytic
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v5
+      - name: Install ${{ matrix.package }} only
+        run: uv sync --package ${{ matrix.package }} --group test
+      - name: Run ${{ matrix.package }} tests
+        working-directory: ${{ matrix.directory }}
+        run: uv run --no-sync --package ${{ matrix.package }} --project ../.. python -m pytest
+
+  workspace:
+    name: Workspace
     runs-on: windows-latest
     env:
       OPENCAD_KERNEL_BACKEND: analytic
@@ -19,9 +48,9 @@ jobs:
         with:
           python-version: "3.11"
       - uses: astral-sh/setup-uv@v5
-      - name: Install Python dependencies
-        run: uv sync --extra test --extra server
-      - name: Run Python tests
+      - name: Install all workspace packages
+        run: uv sync --all-packages --group test
+      - name: Run full suite
         run: uv run --no-sync python -m pytest
 
   viewport:

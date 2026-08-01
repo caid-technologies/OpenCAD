@@ -47,8 +47,8 @@ trap cleanup EXIT INT TERM
 
 echo "Starting backend on http://$BACKEND_HOST:$BACKEND_PORT"
 (
-  cd "$BACKEND_DIR"
-  uv run --extra server --extra occt python -m uvicorn api:app --reload --host "$BACKEND_HOST" --port "$BACKEND_PORT"
+  cd "$ROOT_DIR"
+  uv run --package opencad-backend --extra occt python -m uvicorn opencad_server.app:app --reload --host "$BACKEND_HOST" --port "$BACKEND_PORT"
 ) &
 backend_pid=$!
 
