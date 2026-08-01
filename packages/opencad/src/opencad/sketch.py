@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Self
 
-from opencad_kernel.operations.schemas import SketchSegment
+from opencad.kernel.operations.schemas import SketchSegment
 
 from opencad.runtime import RuntimeContext, get_default_context
 

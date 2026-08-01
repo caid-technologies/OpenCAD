@@ -38,7 +38,7 @@ Configure the model with `OPENCAD_LLM_MODEL` and, when the provider needs it,
 ## Kernel access
 
 The agent never speaks HTTP. It takes a `KernelClient`
-(`opencad_kernel.client`) and the caller picks the transport — an in-process
+(`opencad.kernel.client`) and the caller picks the transport — an in-process
 `LocalKernelClient`, or the HTTP client that `opencad-backend` supplies.
 
 ## Tests

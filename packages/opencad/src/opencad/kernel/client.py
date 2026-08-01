@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from typing import Any, Protocol, runtime_checkable
 
-from opencad_kernel.core.models import Success
-from opencad_kernel.operations.handlers import OpenCadKernel
-from opencad_kernel.operations.registry import OperationRegistry
+from opencad.kernel.core.models import Success
+from opencad.kernel.operations.handlers import OpenCadKernel
+from opencad.kernel.operations.registry import OperationRegistry
 
 
 @runtime_checkable

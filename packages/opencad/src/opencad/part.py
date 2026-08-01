@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Self
 
-from opencad_kernel.operations.schemas import SelectorQuery
+from opencad.kernel.operations.schemas import SelectorQuery
 
 from opencad.runtime import RuntimeContext, get_default_context
 from opencad.sketch import Sketch

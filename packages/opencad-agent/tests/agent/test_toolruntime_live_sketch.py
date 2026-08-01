@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from opencad_agent.tools import ToolRuntime
-from opencad_kernel.client import LocalKernelClient
-from opencad_kernel.operations.handlers import OpenCadKernel
-from opencad_kernel.operations.registry import OperationRegistry
-from opencad_tree.models import FeatureNode, FeatureTree
+from opencad.kernel.client import LocalKernelClient
+from opencad.kernel.operations.handlers import OpenCadKernel
+from opencad.kernel.operations.registry import OperationRegistry
+from opencad.tree.models import FeatureNode, FeatureTree
 
 
 class _RecordingKernelClient(LocalKernelClient):

@@ -16,14 +16,14 @@ from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
 from opencad.version import __version__
-from opencad_kernel.core.backend_factory import create_backend
-from opencad_kernel.core.errors import Failure
-from opencad_kernel.core.backend import StreamingMeshBackend
-from opencad_kernel.core.models import MeshData, OperationResult, Success
-from opencad_kernel.core.snapshot import SnapshotV1
-from opencad_kernel.operations.handlers import OpenCadKernel
-from opencad_kernel.operations.registry import OperationRegistry
-from opencad_kernel.operations.schemas import SelectorQuery
+from opencad.kernel.core.backend_factory import create_backend
+from opencad.kernel.core.errors import Failure
+from opencad.kernel.core.backend import StreamingMeshBackend
+from opencad.kernel.core.models import MeshData, OperationResult, Success
+from opencad.kernel.core.snapshot import SnapshotV1
+from opencad.kernel.operations.handlers import OpenCadKernel
+from opencad.kernel.operations.registry import OperationRegistry
+from opencad.kernel.operations.schemas import SelectorQuery
 from opencad_server.api_app import create_api_app
 
 load_dotenv()

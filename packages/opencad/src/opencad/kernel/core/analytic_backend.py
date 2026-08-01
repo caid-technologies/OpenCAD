@@ -7,9 +7,9 @@ from math import pow
 from pathlib import Path
 from typing import Any, Literal
 
-from opencad_kernel.core.checks import check_bbox_overlap, check_manifold, check_nonzero_volume
-from opencad_kernel.core.errors import ErrorCode, make_failure
-from opencad_kernel.core.geometry import (
+from opencad.kernel.core.checks import check_bbox_overlap, check_manifold, check_nonzero_volume
+from opencad.kernel.core.errors import ErrorCode, make_failure
+from opencad.kernel.core.geometry import (
     box_bbox,
     box_volume,
     cylinder_bbox,
@@ -20,7 +20,7 @@ from opencad_kernel.core.geometry import (
     sphere_volume,
     union_bbox,
 )
-from opencad_kernel.core.models import (
+from opencad.kernel.core.models import (
     BoundingBox,
     MeshData,
     OperationResult,
@@ -28,9 +28,9 @@ from opencad_kernel.core.models import (
     Success,
     TopologyMap,
 )
-from opencad_kernel.core.store import IdStrategy, ShapeStore
-from opencad_kernel.core.topology import build_synthetic_topology
-from opencad_kernel.operations.schemas import (
+from opencad.kernel.core.store import IdStrategy, ShapeStore
+from opencad.kernel.core.topology import build_synthetic_topology
+from opencad.kernel.operations.schemas import (
     BooleanInput,
     ChamferEdgesInput,
     CircularPatternInput,

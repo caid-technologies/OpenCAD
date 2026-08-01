@@ -16,10 +16,10 @@ from pydantic import BaseModel, Field
 
 from opencad.kernel_adapter import normalize_feature_operation, resolve_feature_references
 from opencad.version import __version__
-from opencad_kernel.client import KernelClient
-from opencad_solver.models import Sketch
-from opencad_tree.models import FeatureNode, FeatureTree, RebuildRequest, TreeSnapshotV1
-from opencad_tree.service import FeatureTreeService
+from opencad.kernel.client import KernelClient
+from opencad.solver.models import Sketch
+from opencad.tree.models import FeatureNode, FeatureTree, RebuildRequest, TreeSnapshotV1
+from opencad.tree.service import FeatureTreeService
 from opencad_server.api_app import create_api_app
 from opencad_server.http_kernel_client import HttpKernelClient
 

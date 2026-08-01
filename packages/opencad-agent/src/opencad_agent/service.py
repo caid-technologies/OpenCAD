@@ -8,8 +8,8 @@ from opencad_agent.generated_code import execute_generated_code
 from opencad_agent.llm import LiteLlmProvider
 from opencad_agent.models import ChatRequest, ChatResponse, OperationExecution
 from opencad_agent.prompting import build_code_generation_prompt
-from opencad_kernel.client import KernelClient
-from opencad_tree.models import FeatureTree
+from opencad.kernel.client import KernelClient
+from opencad.tree.models import FeatureTree
 
 logger = logging.getLogger(__name__)
 

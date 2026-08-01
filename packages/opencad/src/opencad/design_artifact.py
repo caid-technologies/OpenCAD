@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Literal, Self
 from pydantic import BaseModel, Field, model_validator
 
 from opencad.version import __version__
-from opencad_tree.models import FeatureTree
+from opencad.tree.models import FeatureTree
 
 if TYPE_CHECKING:
     from opencad.runtime import RuntimeContext

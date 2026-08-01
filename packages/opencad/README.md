@@ -30,9 +30,9 @@ kernel/solver/tree design and `TOPOLOGY.md` for topological naming.
 | Module | Responsibility |
 |--------|----------------|
 | `opencad` | Fluent `Part`/`Sketch` API, `RuntimeContext`, CLI, design artifacts |
-| `opencad_kernel` | B-rep operations, OCCT and analytic backends, `KernelClient` |
-| `opencad_solver` | 2-D constraint solving (NumPy/SciPy and SolveSpace backends) |
-| `opencad_tree` | Feature DAG, incremental rebuild, branching, expressions |
+| `opencad.kernel` | B-rep operations, OCCT and analytic backends, `KernelClient` |
+| `opencad.solver` | 2-D constraint solving (NumPy/SciPy and SolveSpace backends) |
+| `opencad.tree` | Feature DAG, incremental rebuild, branching, expressions |
 
 ## Related distributions
 

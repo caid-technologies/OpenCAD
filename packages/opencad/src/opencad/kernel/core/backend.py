@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from typing import Any, Protocol, runtime_checkable
 
-from opencad_kernel.core.models import MeshData, OperationResult, TopologyMap
-from opencad_kernel.operations.schemas import (
+from opencad.kernel.core.models import MeshData, OperationResult, TopologyMap
+from opencad.kernel.operations.schemas import (
     BooleanInput,
     ChamferEdgesInput,
     CircularPatternInput,

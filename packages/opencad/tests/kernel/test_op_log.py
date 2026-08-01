@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from opencad_kernel.core.errors import ErrorCode, Failure
-from opencad_kernel.core.models import Success
-from opencad_kernel.core.op_log import OpLogEntry, OperationLog
-from opencad_kernel.operations.handlers import OpenCadKernel
-from opencad_kernel.operations.registry import OperationRegistry
-from opencad_kernel.operations.schemas import CreateBoxInput
+from opencad.kernel.core.errors import ErrorCode, Failure
+from opencad.kernel.core.models import Success
+from opencad.kernel.core.op_log import OpLogEntry, OperationLog
+from opencad.kernel.operations.handlers import OpenCadKernel
+from opencad.kernel.operations.registry import OperationRegistry
+from opencad.kernel.operations.schemas import CreateBoxInput
 
 
 @pytest.fixture()
@@ -162,7 +162,7 @@ def test_caller_provided_id_and_timestamp_are_preserved():
 
 
 def test_shape_store_rejects_duplicate_preset_id(kernel: OpenCadKernel):
-    from opencad_kernel.core.models import Success
+    from opencad.kernel.core.models import Success
 
     result = kernel.create_box(CreateBoxInput(length=1, width=1, height=1))
     assert isinstance(result, Success) and result.shape_id

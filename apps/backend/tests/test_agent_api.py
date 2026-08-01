@@ -7,7 +7,7 @@ import opencad_server.agent_router as agent_api
 from opencad_agent.llm import LiteLlmProvider
 from opencad_agent.service import OpenCadAgentService
 from opencad_server.agent_router import app
-from opencad_tree.models import FeatureNode, FeatureTree
+from opencad.tree.models import FeatureNode, FeatureTree
 
 
 def _seed_tree() -> FeatureTree:

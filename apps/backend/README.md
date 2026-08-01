@@ -28,7 +28,7 @@ service can run standalone — for example `opencad_server.kernel_router:app`.
 - `app.py` — aggregate app, mounts every router
 - `api_app.py` — shared FastAPI factory with production CORS/docs defaults
 - `http_kernel_client.py` — the only outbound HTTP client to the kernel;
-  implements `opencad_kernel.client.KernelClient`
+  implements `opencad.kernel.client.KernelClient`
 - `*_router.py` — one router per service
 
 ## Kernel transport

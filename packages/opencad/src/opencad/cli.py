@@ -5,7 +5,7 @@ import runpy
 from pathlib import Path
 
 from opencad.runtime import RuntimeContext, get_default_context, set_default_context
-from opencad_kernel.core.backend_factory import create_backend
+from opencad.kernel.core.backend_factory import create_backend
 
 
 def _add_backend_argument(parser: argparse.ArgumentParser) -> None:

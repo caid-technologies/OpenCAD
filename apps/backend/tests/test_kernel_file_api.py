@@ -4,8 +4,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 import opencad_server.kernel_router as kernel_api
-from opencad_kernel.operations.handlers import OpenCadKernel
-from opencad_kernel.operations.registry import OperationRegistry
+from opencad.kernel.operations.handlers import OpenCadKernel
+from opencad.kernel.operations.registry import OperationRegistry
 
 
 @pytest.fixture()

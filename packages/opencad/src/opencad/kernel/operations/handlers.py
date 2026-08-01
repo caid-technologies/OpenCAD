@@ -1,6 +1,6 @@
 """Kernel coordination layer.
 
-Geometry implementations live in ``opencad_kernel.core`` backends.  This
+Geometry implementations live in ``opencad.kernel.core`` backends.  This
 module keeps the public ``OpenCadKernel`` entry point stable while owning
 cross-backend concerns such as assembly-mate state and topology selection.
 """
@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from opencad_kernel.core.analytic_backend import AnalyticBackend
-from opencad_kernel.core.backend import KernelBackend
-from opencad_kernel.core.errors import ErrorCode, make_failure
-from opencad_kernel.core.models import (
+from opencad.kernel.core.analytic_backend import AnalyticBackend
+from opencad.kernel.core.backend import KernelBackend
+from opencad.kernel.core.errors import ErrorCode, make_failure
+from opencad.kernel.core.models import (
     AssemblyMate,
     AssemblyMateStatus,
     MeshData,
@@ -21,9 +21,9 @@ from opencad_kernel.core.models import (
     Success,
     TopologyMap,
 )
-from opencad_kernel.core.store import IdStrategy, MateStore
-from opencad_kernel.core.topology import select as topo_select
-from opencad_kernel.operations.schemas import (
+from opencad.kernel.core.store import IdStrategy, MateStore
+from opencad.kernel.core.topology import select as topo_select
+from opencad.kernel.operations.schemas import (
     BooleanInput,
     ChamferEdgesInput,
     CircularPatternInput,

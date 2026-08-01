@@ -4,7 +4,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
-from opencad_tree.models import FeatureTree
+from opencad.tree.models import FeatureTree
 
 
 def build_system_prompt(tree_state: FeatureTree) -> str:

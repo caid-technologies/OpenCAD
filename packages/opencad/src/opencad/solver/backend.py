@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from opencad_solver.models import (
+from opencad.solver.models import (
     CheckResult,
     ConstraintDiagnostics,
     Sketch,

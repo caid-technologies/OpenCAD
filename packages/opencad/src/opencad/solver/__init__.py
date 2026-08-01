@@ -1,11 +1,11 @@
-from opencad_solver.backend import SolverBackend
-from opencad_solver.solver import (
+from opencad.solver.backend import SolverBackend
+from opencad.solver.solver import (
     PythonSolverBackend,
     check_sketch,
     diagnose_sketch,
     solve_sketch,
 )
-from opencad_solver.solvespace_backend import SolveSpaceBackend, is_available as solvespace_available
+from opencad.solver.solvespace_backend import SolveSpaceBackend, is_available as solvespace_available
 
 __all__ = [
     "SolverBackend",

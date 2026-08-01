@@ -3,16 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from opencad_kernel.client import KernelClient, LocalKernelClient
-from opencad_kernel.core.backend import KernelBackend
-from opencad_kernel.core.models import TopologyMap
-from opencad_kernel.core.topology import select as select_topology
-from opencad_kernel.operations.handlers import OpenCadKernel
-from opencad_kernel.operations.registry import OperationRegistry
-from opencad_kernel.operations.schemas import SelectorQuery
+from opencad.kernel.client import KernelClient, LocalKernelClient
+from opencad.kernel.core.backend import KernelBackend
+from opencad.kernel.core.models import TopologyMap
+from opencad.kernel.core.topology import select as select_topology
+from opencad.kernel.operations.handlers import OpenCadKernel
+from opencad.kernel.operations.registry import OperationRegistry
+from opencad.kernel.operations.schemas import SelectorQuery
 from opencad.kernel_adapter import execute_feature_node, registry_result_to_dict
-from opencad_tree.models import FeatureNode, FeatureTree
-from opencad_tree.service import FeatureTreeService
+from opencad.tree.models import FeatureNode, FeatureTree
+from opencad.tree.service import FeatureTreeService
 
 if TYPE_CHECKING:
     from opencad.design_artifact import DesignArtifact

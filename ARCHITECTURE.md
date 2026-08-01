@@ -7,7 +7,7 @@ directory. OpenCAD is a uv workspace of three Python packages:
 
 | Distribution | Location | Ships | Depends on |
 |--------------|----------|-------|------------|
-| `opencad` | `packages/opencad` | `opencad`, `opencad_kernel`, `opencad_solver`, `opencad_tree` | pydantic, numpy |
+| `opencad` | `packages/opencad` | `opencad`, `opencad.kernel`, `opencad.solver`, `opencad.tree` | pydantic, numpy |
 | `opencad-agent` | `packages/opencad-agent` | `opencad_agent` | `opencad`; `[llm]` adds LiteLLM |
 | `opencad-backend` | `apps/backend` | `opencad_server` | `opencad`, `opencad-agent[llm]`, FastAPI, httpx, uvicorn |
 
@@ -36,7 +36,7 @@ Two mechanisms keep it that way:
 ### Kernel access contract
 
 Core code that needs the kernel depends on the `KernelClient` protocol in
-`opencad_kernel/client.py`, never on a transport:
+`opencad/kernel/client.py`, never on a transport:
 
 ```python
 class KernelClient(Protocol):
@@ -47,7 +47,7 @@ class KernelClient(Protocol):
 
 Two implementations exist:
 
-- `opencad_kernel.client.LocalKernelClient` — in-process, backed by an
+- `opencad.kernel.client.LocalKernelClient` — in-process, backed by an
   `OperationRegistry`. Used by `RuntimeContext`, the CLI, and tests.
 - `opencad_server.http_kernel_client.HttpKernelClient` — remote, backed by httpx.
   Selected in `agent_router.py` and `tree_router.py` when
@@ -65,10 +65,10 @@ calls back into the core's public surface (`context.kernel_client`,
 
 ## Geometry Backend Boundary
 
-- `opencad_kernel.operations.handlers.OpenCadKernel` is the stable coordinator used by the registry and public APIs.
+- `opencad.kernel.operations.handlers.OpenCadKernel` is the stable coordinator used by the registry and public APIs.
 - Geometry is implemented behind `KernelBackend`; the coordinator contains no geometry algorithms.
-- `opencad_kernel.core.occt_backend.OcctBackend` owns production B-rep construction, topology, file I/O, and tessellation.
-- `opencad_kernel.core.analytic_backend.AnalyticBackend` owns the metadata-only approximation used by lightweight and isolated tests.
+- `opencad.kernel.core.occt_backend.OcctBackend` owns production B-rep construction, topology, file I/O, and tessellation.
+- `opencad.kernel.core.analytic_backend.AnalyticBackend` owns the metadata-only approximation used by lightweight and isolated tests.
 - Assembly mates and the shared topology selector stay in the coordinator because they are application-level behavior rather than geometry-engine behavior.
 - Every operation-log entry records the concrete backend class that executed it, allowing snapshots and diagnostics to distinguish analytic results from OCCT results.
 - Face-by-face mesh streaming is tracked separately through the optional `StreamingMeshBackend` capability.
@@ -251,8 +251,8 @@ This path is intended for script-first workflows where users want Build123d-like
 
 ### Pluggable Solver Backend
 
-The solver service (`opencad_solver`) uses a backend abstraction (`SolverBackend` ABC
-in `opencad_solver/backend.py`) to decouple constraint-solving logic from the API layer.
+The solver service (`opencad.solver`) uses a backend abstraction (`SolverBackend` ABC
+in `opencad/solver/backend.py`) to decouple constraint-solving logic from the API layer.
 
 - **PythonSolverBackend** (default) — NumPy/SciPy Gauss-Newton with numerical Jacobian.
 - **SolveSpaceBackend** — delegates to SolveSpace via `python-solvespace` bindings.

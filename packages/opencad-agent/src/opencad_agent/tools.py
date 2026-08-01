@@ -5,8 +5,8 @@ import math
 from copy import deepcopy
 from typing import Any
 
-from opencad_kernel.client import KernelClient
-from opencad_tree.models import FeatureNode, FeatureTree
+from opencad.kernel.client import KernelClient
+from opencad.tree.models import FeatureNode, FeatureTree
 
 logger = logging.getLogger(__name__)
 

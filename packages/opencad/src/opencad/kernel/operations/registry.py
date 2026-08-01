@@ -8,11 +8,11 @@ from typing import Any, Callable, Type
 from pydantic import BaseModel
 from pydantic import ValidationError
 
-from opencad_kernel.core.errors import ErrorCode, make_failure
-from opencad_kernel.core.models import OperationResult, Success
-from opencad_kernel.core.op_log import OpLogEntry, OperationLog
-from opencad_kernel.operations.handlers import OpenCadKernel
-from opencad_kernel.operations.schemas import (
+from opencad.kernel.core.errors import ErrorCode, make_failure
+from opencad.kernel.core.models import OperationResult, Success
+from opencad.kernel.core.op_log import OpLogEntry, OperationLog
+from opencad.kernel.operations.handlers import OpenCadKernel
+from opencad.kernel.operations.schemas import (
     BooleanInput,
     ChamferEdgesInput,
     CircularPatternInput,

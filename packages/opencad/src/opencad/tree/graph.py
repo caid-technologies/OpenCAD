@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 
-from opencad_tree.models import FeatureNode
+from opencad.tree.models import FeatureNode
 
 try:  # pragma: no cover - optional dependency
     import networkx as nx

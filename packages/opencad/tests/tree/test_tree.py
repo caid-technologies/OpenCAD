@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from opencad_tree.models import FeatureNode, FeatureTree
-from opencad_tree.service import FeatureTreeService
+from opencad.tree.models import FeatureNode, FeatureTree
+from opencad.tree.service import FeatureTreeService
 
 
 def _build_12_node_tree(root_id: str = "base") -> FeatureTree:

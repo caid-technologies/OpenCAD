@@ -17,7 +17,7 @@ results back.
 
 from __future__ import annotations
 
-from opencad_solver.models import (
+from opencad.solver.models import (
     CheckResult,
     ConstraintDiagnostics,
     JacobianInfo,
@@ -105,7 +105,7 @@ class SolveSpaceBackend:
         self._require()
         # Use the Python-solver diagnostics as a compatible fallback
         # until full slvs Jacobian extraction is implemented.
-        from opencad_solver.solver import diagnose_sketch
+        from opencad.solver.solver import diagnose_sketch
 
         return diagnose_sketch(sketch, tolerance=tolerance)
 
@@ -140,7 +140,7 @@ class SolveSpaceBackend:
         sys = slvs.SolverSystem()
         wp = sys.create_2d_base()
 
-        from opencad_solver.models import (
+        from opencad.solver.models import (
             ArcEntity,
             CircleEntity,
             ConstraintType,

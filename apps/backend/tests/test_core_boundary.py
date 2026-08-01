@@ -17,11 +17,10 @@ from pathlib import Path
 
 import pytest
 
+# Top-level roots only. The scan recurses, so opencad.kernel, opencad.solver,
+# and opencad.tree are covered by walking `opencad`.
 CORE_PACKAGES = (
     "opencad",
-    "opencad_kernel",
-    "opencad_solver",
-    "opencad_tree",
     "opencad_agent",
 )
 

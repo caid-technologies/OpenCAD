@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from opencad_solver.models import (
+from opencad.solver.models import (
     Constraint,
     ConstraintDiagnostics,
     ConstraintType,
@@ -13,13 +13,13 @@ from opencad_solver.models import (
     Sketch,
     SolveStatus,
 )
-from opencad_solver.solver import (
+from opencad.solver.solver import (
     PythonSolverBackend,
     check_sketch,
     diagnose_sketch,
     solve_sketch,
 )
-from opencad_solver.solvespace_backend import SolveSpaceBackend, SolveSpaceUnavailableError, is_available
+from opencad.solver.solvespace_backend import SolveSpaceBackend, SolveSpaceUnavailableError, is_available
 
 
 def test_simple_rectangle_solves() -> None:

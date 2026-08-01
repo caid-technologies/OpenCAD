@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import pytest
 
-from opencad_kernel.core.errors import Failure
-from opencad_kernel.core.models import Success, TopologyMap
-from opencad_kernel.operations.handlers import OpenCadKernel
-from opencad_kernel.operations.registry import OperationRegistry
-from opencad_kernel.operations.schemas import (
+from opencad.kernel.core.errors import Failure
+from opencad.kernel.core.models import Success, TopologyMap
+from opencad.kernel.operations.handlers import OpenCadKernel
+from opencad.kernel.operations.registry import OperationRegistry
+from opencad.kernel.operations.schemas import (
     ChamferEdgesInput,
     CircularPatternInput,
     CreateBoxInput,
@@ -436,7 +436,7 @@ class TestRegistryNewOps:
 
 class TestAssemblyMates:
     def test_create_coincident_mate(self, kernel: OpenCadKernel) -> None:
-        from opencad_kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
+        from opencad.kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
 
         box = kernel.create_box(CreateBoxInput(length=10, width=10, height=10))
         cyl = kernel.create_cylinder(CreateCylinderInput(radius=3, height=10))
@@ -454,7 +454,7 @@ class TestAssemblyMates:
         assert r.metadata["mate"]["status"] == "pending"
 
     def test_create_distance_mate(self, kernel: OpenCadKernel) -> None:
-        from opencad_kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
+        from opencad.kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
 
         b1 = kernel.create_box(CreateBoxInput(length=5, width=5, height=5))
         b2 = kernel.create_box(CreateBoxInput(length=5, width=5, height=5))
@@ -471,7 +471,7 @@ class TestAssemblyMates:
         assert r.metadata["mate"]["value"] == 5.0
 
     def test_distance_mate_requires_value(self, kernel: OpenCadKernel) -> None:
-        from opencad_kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
+        from opencad.kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
 
         box = kernel.create_box(CreateBoxInput(length=5, width=5, height=5))
         assert isinstance(box, Success) and box.shape is not None
@@ -485,7 +485,7 @@ class TestAssemblyMates:
         assert "value" in r.message.lower()
 
     def test_mate_invalid_entity_a(self, kernel: OpenCadKernel) -> None:
-        from opencad_kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
+        from opencad.kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
 
         box = kernel.create_box(CreateBoxInput(length=5, width=5, height=5))
         assert isinstance(box, Success) and box.shape is not None
@@ -499,7 +499,7 @@ class TestAssemblyMates:
         assert r.code.value == "MATE_INVALID_REFERENCE"
 
     def test_mate_invalid_entity_b(self, kernel: OpenCadKernel) -> None:
-        from opencad_kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
+        from opencad.kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
 
         box = kernel.create_box(CreateBoxInput(length=5, width=5, height=5))
         assert isinstance(box, Success) and box.shape is not None
@@ -512,7 +512,7 @@ class TestAssemblyMates:
         assert isinstance(r, Failure)
 
     def test_duplicate_mate_rejected(self, kernel: OpenCadKernel) -> None:
-        from opencad_kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
+        from opencad.kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
 
         box = kernel.create_box(CreateBoxInput(length=10, width=10, height=10))
         cyl = kernel.create_cylinder(CreateCylinderInput(radius=3, height=10))
@@ -531,7 +531,7 @@ class TestAssemblyMates:
         assert r2.code.value == "MATE_DUPLICATE"
 
     def test_delete_mate(self, kernel: OpenCadKernel) -> None:
-        from opencad_kernel.operations.schemas import (
+        from opencad.kernel.operations.schemas import (
             AssemblyMateType,
             CreateAssemblyMateInput,
             DeleteAssemblyMateInput,
@@ -554,14 +554,14 @@ class TestAssemblyMates:
         assert isinstance(del_r, Success)
 
     def test_delete_nonexistent_mate(self, kernel: OpenCadKernel) -> None:
-        from opencad_kernel.operations.schemas import DeleteAssemblyMateInput
+        from opencad.kernel.operations.schemas import DeleteAssemblyMateInput
 
         r = kernel.delete_assembly_mate(DeleteAssemblyMateInput(mate_id="nope"))
         assert isinstance(r, Failure)
         assert r.code.value == "MATE_NOT_FOUND"
 
     def test_list_mates(self, kernel: OpenCadKernel) -> None:
-        from opencad_kernel.operations.schemas import (
+        from opencad.kernel.operations.schemas import (
             AssemblyMateType,
             CreateAssemblyMateInput,
             ListAssemblyMatesInput,
@@ -588,7 +588,7 @@ class TestAssemblyMates:
         assert len(r.metadata["mates"]) == 2
 
     def test_list_mates_filtered_by_entity(self, kernel: OpenCadKernel) -> None:
-        from opencad_kernel.operations.schemas import (
+        from opencad.kernel.operations.schemas import (
             AssemblyMateType,
             CreateAssemblyMateInput,
             ListAssemblyMatesInput,
@@ -618,7 +618,7 @@ class TestAssemblyMates:
 
     def test_all_mate_types(self, kernel: OpenCadKernel) -> None:
         """Ensure every AssemblyMateType can be created."""
-        from opencad_kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
+        from opencad.kernel.operations.schemas import AssemblyMateType, CreateAssemblyMateInput
 
         box = kernel.create_box(CreateBoxInput(length=10, width=10, height=10))
         cyl = kernel.create_cylinder(CreateCylinderInput(radius=3, height=10))

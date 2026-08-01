@@ -8,7 +8,7 @@ import pytest
 
 from opencad import Part, Sketch, get_default_context, reset_default_context
 from opencad.cli import main
-from opencad_kernel.core.backend_factory import BackendUnavailableError
+from opencad.kernel.core.backend_factory import BackendUnavailableError
 
 
 def test_cli_build_round_trip(tmp_path: Path) -> None:
