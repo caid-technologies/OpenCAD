@@ -1,19 +1,19 @@
 {
-  "name": "opencad-viewport",
+  "name": "opencad-viewport-app",
   "version": "0.1.1",
+  "description": "Reference application that hosts the OpenCAD viewport components",
   "private": true,
-  "packageManager": "pnpm@10.25.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.17.10",
-    "axios": "^1.11.0",
+    "opencad-viewport": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.169.0"

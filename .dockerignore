@@ -16,9 +16,11 @@ __pycache__
 apps/backend/.env
 packages/**/.env
 
+**/node_modules
+**/dist
+**/tsconfig.tsbuildinfo
+**/.vite
 apps/opencad_viewport/.env
-apps/opencad_viewport/node_modules
-apps/opencad_viewport/dist
-apps/opencad_viewport/tsconfig.tsbuildinfo
+packages/**/.env
 
 *.log
