@@ -9,27 +9,31 @@ A modular CAD system for parametric, programmable, and AI-assisted design
 - `opencad.tree` — parametric feature-tree DAG (CRUD + rebuild + stale propagation)
 - `opencad_agent` — AI agent that plans and executes operations
 - `opencad_server` — FastAPI transport mounting all of the above
-- `opencad_viewport` — React + Three.js viewport UI (mock mode by default)
+- `opencad-viewport` — publishable React + Three.js component library (npm)
 
 ## Layout
 
-This is a uv workspace of three independently installable Python
-distributions plus the frontend. The core carries no web framework: the
-dependency arrow runs core ← agent ← backend and never the other way.
+This is a uv workspace of three Python distributions and a pnpm workspace
+holding one npm package, all independently installable. The core carries no
+web framework: the dependency arrow runs core ← agent ← backend and never the
+other way. Applications under `apps/` are never published; they consume the
+libraries under `packages/`.
 
 ```text
 packages/
 ├── opencad/             # dist: opencad — kernel, solver, tree, fluent API, CLI
 │   ├── src/             #   pydantic + numpy only. No FastAPI, no httpx.
 │   └── tests/
-└── opencad-agent/       # dist: opencad-agent — LLM modelling on the core
-    ├── src/             #   depends on opencad; [llm] extra adds LiteLLM
-    └── tests/
+├── opencad-agent/       # dist: opencad-agent — LLM modelling on the core
+│   ├── src/             #   depends on opencad; [llm] extra adds LiteLLM
+│   └── tests/
+└── opencad-viewport/    # npm: opencad-viewport — React component library
+    └── src/             #   react/three are peer deps, never bundled
 apps/
 ├── backend/             # dist: opencad-backend — the only FastAPI consumer
 │   ├── src/             #   opencad_server: routers, app factory, HTTP client
 │   └── tests/
-└── opencad_viewport/    # React + Three.js frontend
+└── opencad_viewport/    # reference app hosting the components (not published)
 scripts/                 # Development and smoke-test scripts
 ```
 
@@ -115,9 +119,9 @@ curl -s http://127.0.0.1:8000/tree/healthz
 ### 4. Start the frontend
 
 ```bash
-cd apps/opencad_viewport
-pnpm install
-pnpm dev                                 # → http://localhost:5173
+pnpm install                             # from the repository root
+pnpm --filter opencad-viewport build     # build the component library first
+pnpm --filter opencad-viewport-app dev   # → http://localhost:5173
 ```
 
 The viewport uses **mock geometry/solver data** by default (no backend required for those flows).
@@ -133,10 +137,11 @@ project metadata and backend package files:
 docker build -f apps/backend/Dockerfile -t opencad-backend .
 ```
 
-Build the frontend image from the viewport directory:
+Build the frontend image from the repository root too — the app depends on the
+`opencad-viewport` workspace library:
 
 ```bash
-docker build -f apps/opencad_viewport/Dockerfile -t opencad-frontend apps/opencad_viewport
+docker build -f apps/opencad_viewport/Dockerfile -t opencad-frontend .
 ```
 
 Run the backend API on port `8000`:
@@ -162,7 +167,7 @@ docker build \
   --build-arg VITE_BASE_URL=http://localhost:8000 \
   --build-arg VITE_USE_MOCK=false \
   --build-arg VITE_USE_CHAT_MOCK=false \
-  apps/opencad_viewport
+  .
 ```
 
 ## Configuration

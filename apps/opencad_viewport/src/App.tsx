@@ -1,15 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
-import { OpenCadApiClient } from "./api/client";
-import { ChatPanel } from "./components/ChatPanel";
-import { CadFileToolbar } from "./components/CadFileToolbar";
-import { FeatureTreePanel } from "./components/FeatureTreePanel";
-import { SketchEditor } from "./components/SketchEditor";
-import { Viewport3D } from "./components/Viewport3D";
-import { getHighlightedViewportShapeIds, getViewportShapeIds } from "./featureVisibility";
-import { mockMeshes } from "./mock/mockData";
-import { sketchFromNode } from "./sketchData";
-import { createEmptyTree } from "./types";
-import type { CadFileFormat, ChatOperationExecution, FeatureNodeView, FeatureTreeView, MeshPayload } from "./types";
+import {
+  CadFileToolbar,
+  ChatPanel,
+  FeatureTreePanel,
+  OpenCadApiClient,
+  SketchEditor,
+  Viewport3D,
+  createEmptyTree,
+  getHighlightedViewportShapeIds,
+  getViewportShapeIds,
+  mockMeshes,
+  sketchFromNode,
+} from "opencad-viewport";
+import type {
+  CadFileFormat,
+  ChatOperationExecution,
+  FeatureNodeView,
+  FeatureTreeView,
+  MeshPayload,
+} from "opencad-viewport";
 
 const FALLBACK_MESH_Y_OFFSET_SCALE = 0.35;
 

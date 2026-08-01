@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### Viewport split into a publishable npm package
+
+`apps/opencad_viewport` was a Vite application — `private: true`, no entry
+point, no types — so nothing in it could be consumed from npm. The components
+are now a library:
+
+- **`packages/opencad-viewport`** — npm package `opencad-viewport`. Ships
+  `Viewport3D`, `FeatureTreePanel`, `SketchEditor`, `ChatPanel`,
+  `CadFileToolbar`, `OpenCadApiClient`, the feature-tree helpers, the mock
+  fixtures, and all view-model types, with generated `.d.ts` and an ES build.
+- **`apps/opencad_viewport`** — reference app, still `private`, now just
+  `index.html` + `App.tsx` + `main.tsx` consuming the library.
+
+`react`, `react-dom`, `three`, `@react-three/fiber`, and `@react-three/drei`
+are **peer dependencies** and stay external — bundling them causes
+duplicate-instance failures (invalid hook calls, broken `instanceof` checks).
+`axios` is external too, resolved from the dependency list.
+
+The stylesheet is opt-in rather than a side effect of importing the entry:
+
+```ts
+import { Viewport3D } from "opencad-viewport";
+import "opencad-viewport/styles.css";
+```
+
+Repository-level changes: a pnpm workspace at the root (the lockfile moved
+from `apps/opencad_viewport/pnpm-lock.yaml`), the frontend Docker build now
+takes the repository root as its context, and CI builds the library, builds
+the app against it, and verifies the publishable tarball.
+
 ### Core modules nested under `opencad` (breaking)
 
 The `opencad_` prefix restated the distribution name on every import, so the

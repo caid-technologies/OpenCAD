@@ -56,9 +56,6 @@ jobs:
   viewport:
     name: Viewport
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: apps/opencad_viewport
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -68,10 +65,17 @@ jobs:
         with:
           node-version: "20"
           cache: pnpm
-          cache-dependency-path: apps/opencad_viewport/pnpm-lock.yaml
-      - name: Install frontend dependencies
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-      - name: Run frontend tests
-        run: pnpm test
-      - name: Build frontend
-        run: pnpm build
+      - name: Test the component library
+        run: pnpm --filter opencad-viewport test
+      - name: Build the component library
+        run: pnpm --filter opencad-viewport build
+      - name: Build the reference app against it
+        run: pnpm --filter opencad-viewport-app build
+      # Catches a broken exports map, a missing README/LICENSE, or dist
+      # files that were never built before publish.
+      - name: Verify the publishable tarball
+        working-directory: packages/opencad-viewport
+        run: npm pack --dry-run
