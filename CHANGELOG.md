@@ -2,6 +2,11 @@
 
 ## 0.2.0 - 2026-08-01
 
+Published: `opencad`, `opencad-agent`, and `opencad-backend` on PyPI.
+`opencad-viewport` is on npm at `0.1.1` — identical code, published just before
+this version bump; it will rejoin lockstep at the next release.
+
+
 ### Viewport split into a publishable npm package
 
 `apps/opencad_viewport` was a Vite application — `private: true`, no entry
