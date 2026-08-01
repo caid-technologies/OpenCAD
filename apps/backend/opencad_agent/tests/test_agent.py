@@ -327,20 +327,50 @@ Part(name="LLM Part")"""
             tree_state=_seed_tree(),
             conversation_history=[],
             llm_provider="openai",
-            llm_model="gpt-4o-mini",
+            llm_model="gpt-5.5",
         )
     )
 
     assert response.operations_executed == []
     assert response.generated_code == expected_code
-    assert captured["model"] == "openai/gpt-4o-mini"
-    assert captured["temperature"] == 0.2
+    assert captured["model"] == "openai/gpt-5.5"
+    assert "temperature" not in captured
     assert "reasoning_effort" not in captured
     messages = captured["messages"]
     assert isinstance(messages, list)
     system_messages = [message for message in messages if message["role"] == "system"]
     assert system_messages
     assert any("Valid repeated-feature composition example" in message["content"] for message in system_messages)
+
+
+
+def test_service_uses_environment_litellm_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENCAD_LLM_PROVIDER", "openai")
+    monkeypatch.setenv("OPENCAD_LLM_MODEL", "gpt-5.5")
+    captured: dict[str, object] = {}
+    expected_code = """from opencad import Part, Sketch
+
+Part(name="Env LLM Part")"""
+
+    def fake_completion(**kwargs: object) -> dict[str, object]:
+        captured.update(kwargs)
+        return {"choices": [{"message": {"content": expected_code}}]}
+
+    service = OpenCadAgentService(
+        live_kernel=False,
+        llm_client=LiteLlmProvider(completion_func=fake_completion),
+    )
+    response = service.chat(
+        ChatRequest(
+            message="Generate a motor script",
+            tree_state=_seed_tree(),
+            conversation_history=[],
+        )
+    )
+
+    assert response.generated_code == expected_code
+    assert captured["model"] == "openai/gpt-5.5"
+    assert "temperature" not in captured
 
 
 def test_ollama_always_uses_fixed_non_reasoning_mode() -> None:

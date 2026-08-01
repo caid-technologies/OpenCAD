@@ -23,6 +23,11 @@ def _resolve_model_name(provider: str | None, model: str) -> str:
     return model
 
 
+def _supports_custom_temperature(resolved_model: str) -> bool:
+    model_name = resolved_model.rsplit("/", 1)[-1].lower()
+    return not model_name.startswith("gpt-5")
+
+
 def _strip_code_fences(code: str) -> str:
     code = code.strip()
     if code.startswith("```python"):
@@ -78,10 +83,11 @@ class LiteLlmProvider:
         completion_options: dict[str, Any] = {
             "model": resolved_model,
             "messages": messages,
-            "temperature": DEFAULT_CODE_TEMPERATURE,
             "max_tokens": 1600,
             "seed": 0,
         }
+        if _supports_custom_temperature(resolved_model):
+            completion_options["temperature"] = DEFAULT_CODE_TEMPERATURE
         if resolved_model.startswith("ollama/"):
             completion_options["reasoning_effort"] = "none"
         response = self._completion(**completion_options)
