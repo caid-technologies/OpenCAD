@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.1 - 2026-08-01
+
+### Corrected license metadata
+
+The distributions declared `MIT` while the repository has always been licensed
+**Apache-2.0** — the LICENSE file has been Apache-2.0 since the initial release
+on 2026-03-05. The `MIT` string was introduced into packaging metadata on
+2026-03-11 and propagated into every manifest during the 0.2.0 split.
+
+- All manifests now declare `Apache-2.0`.
+- The Python distributions had been shipping **no license text at all** — the
+  0.2.0 wheels contain no `licenses/` entry. Each package now includes the
+  LICENSE file and declares `license-files`, so the Apache text ships inside
+  the artifact as Apache-2.0 section 4 requires.
+- `opencad-viewport` shipped the Apache text under an `MIT` label; both now
+  agree.
+
+No rights granted by the project have changed. 0.2.0 remains installable; its
+metadata is wrong but the terms were always Apache-2.0.
+
 ## 0.2.0 - 2026-08-01
 
 Published: `opencad`, `opencad-agent`, and `opencad-backend` on PyPI.
