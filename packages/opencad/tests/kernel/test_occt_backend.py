@@ -1,7 +1,7 @@
 """Tests for the OCCT backend.
 
 These tests are skipped if CadQuery/OCP is not installed.
-Run with: pytest opencad_kernel/tests/test_occt_backend.py
+Run with: pytest tests/kernel/test_occt_backend.py
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ pytestmark = pytest.mark.skipif(not HAS_OCCT, reason="CadQuery/OCP not installed
 
 @pytest.fixture()
 def backend():
-    from opencad_kernel.core.occt_backend import OcctBackend
+    from opencad.kernel.core.occt_backend import OcctBackend
 
     return OcctBackend(tolerance=1e-6, id_strategy="readable")
 
@@ -28,8 +28,8 @@ def backend():
 
 
 def test_create_box(backend):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateBoxInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateBoxInput
 
     result = backend.create_box(CreateBoxInput(length=10.0, width=5.0, height=3.0))
     assert isinstance(result, Success)
@@ -42,8 +42,8 @@ def test_create_box(backend):
 def test_create_cylinder(backend):
     from math import pi
 
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateCylinderInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateCylinderInput
 
     result = backend.create_cylinder(CreateCylinderInput(radius=2.0, height=5.0))
     assert isinstance(result, Success)
@@ -55,8 +55,8 @@ def test_create_cylinder(backend):
 def test_create_sphere(backend):
     from math import pi
 
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateSphereInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateSphereInput
 
     result = backend.create_sphere(CreateSphereInput(radius=3.0))
     assert isinstance(result, Success)
@@ -66,8 +66,8 @@ def test_create_sphere(backend):
 
 
 def test_create_box_invalid(backend):
-    from opencad_kernel.core.errors import ErrorCode, Failure
-    from opencad_kernel.operations.schemas import CreateBoxInput
+    from opencad.kernel.core.errors import ErrorCode, Failure
+    from opencad.kernel.operations.schemas import CreateBoxInput
 
     result = backend.create_box(CreateBoxInput(length=-1.0, width=2.0, height=3.0))
     assert isinstance(result, Failure)
@@ -78,8 +78,8 @@ def test_create_box_invalid(backend):
 
 
 def _make_two_boxes(backend, offset: float = 0.0):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateBoxInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateBoxInput
 
     a = backend.create_box(CreateBoxInput(length=2.0, width=2.0, height=2.0))
     b = backend.create_box(CreateBoxInput(length=2.0, width=2.0, height=2.0))
@@ -88,8 +88,8 @@ def _make_two_boxes(backend, offset: float = 0.0):
 
 
 def test_boolean_union(backend):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import BooleanInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import BooleanInput
 
     a_id, b_id = _make_two_boxes(backend)
     result = backend.boolean_union(BooleanInput(shape_a_id=a_id, shape_b_id=b_id))
@@ -99,8 +99,8 @@ def test_boolean_union(backend):
 
 
 def test_boolean_cut(backend):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import BooleanInput, CreateBoxInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import BooleanInput, CreateBoxInput
 
     a = backend.create_box(CreateBoxInput(length=10.0, width=10.0, height=10.0))
     b = backend.create_box(CreateBoxInput(length=5.0, width=5.0, height=5.0))
@@ -115,8 +115,8 @@ def test_boolean_cut(backend):
 
 
 def test_boolean_intersection(backend):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import BooleanInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import BooleanInput
 
     a_id, b_id = _make_two_boxes(backend)
     result = backend.boolean_intersection(BooleanInput(shape_a_id=a_id, shape_b_id=b_id))
@@ -126,8 +126,8 @@ def test_boolean_intersection(backend):
 
 
 def test_boolean_shape_not_found(backend):
-    from opencad_kernel.core.errors import ErrorCode, Failure
-    from opencad_kernel.operations.schemas import BooleanInput
+    from opencad.kernel.core.errors import ErrorCode, Failure
+    from opencad.kernel.operations.schemas import BooleanInput
 
     result = backend.boolean_union(BooleanInput(shape_a_id="missing", shape_b_id="also"))
     assert isinstance(result, Failure)
@@ -138,8 +138,8 @@ def test_boolean_shape_not_found(backend):
 
 
 def test_fillet_edges(backend):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateBoxInput, FilletEdgesInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateBoxInput, FilletEdgesInput
 
     box = backend.create_box(CreateBoxInput(length=10.0, width=10.0, height=10.0))
     assert isinstance(box, Success) and box.shape is not None
@@ -153,9 +153,9 @@ def test_fillet_edges(backend):
 
 
 def test_fillet_no_edges(backend):
-    from opencad_kernel.core.errors import ErrorCode, Failure
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateBoxInput, FilletEdgesInput
+    from opencad.kernel.core.errors import ErrorCode, Failure
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateBoxInput, FilletEdgesInput
 
     box = backend.create_box(CreateBoxInput(length=5.0, width=5.0, height=5.0))
     assert isinstance(box, Success)
@@ -168,8 +168,8 @@ def test_fillet_no_edges(backend):
 
 
 def test_tessellate_box(backend):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateBoxInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateBoxInput
 
     box = backend.create_box(CreateBoxInput(length=5.0, width=5.0, height=5.0))
     assert isinstance(box, Success) and box.shape_id
@@ -188,8 +188,8 @@ def test_tessellate_box(backend):
 
 
 def test_tessellation_preserves_boolean_and_fillet_face_owners(backend):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import BooleanInput, CreateCylinderInput, FilletEdgesInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import BooleanInput, CreateCylinderInput, FilletEdgesInput
 
     shank = backend.create_cylinder(CreateCylinderInput(radius=3.0, height=30.0))
     head = backend.create_cylinder(CreateCylinderInput(radius=7.0, height=5.0))
@@ -212,8 +212,8 @@ def test_tessellation_preserves_boolean_and_fillet_face_owners(backend):
 
 
 def test_tessellate_cylinder(backend):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateCylinderInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateCylinderInput
 
     cyl = backend.create_cylinder(CreateCylinderInput(radius=2.0, height=5.0))
     assert isinstance(cyl, Success) and cyl.shape_id
@@ -226,8 +226,8 @@ def test_tessellate_cylinder(backend):
 def test_extrude_sketch_with_subtractive_circle(backend):
     from math import pi
 
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateSketchInput, ExtrudeInput, SketchSegment
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateSketchInput, ExtrudeInput, SketchSegment
 
     segments = [
         SketchSegment(type="line", start=(0, 0), end=(10, 0)),
@@ -252,8 +252,8 @@ def test_tessellate_missing_shape(backend):
 
 
 def test_tessellate_face_streaming(backend):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateBoxInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateBoxInput
 
     box = backend.create_box(CreateBoxInput(length=5.0, width=5.0, height=5.0))
     assert isinstance(box, Success) and box.shape_id
@@ -279,8 +279,8 @@ def test_tessellate_face_streaming(backend):
 
 @pytest.mark.parametrize("extension", ["step", "stp"])
 def test_step_export_import_roundtrip(backend, tmp_path, extension):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateBoxInput, ExportStepInput, ImportStepInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateBoxInput, ExportStepInput, ImportStepInput
 
     box = backend.create_box(CreateBoxInput(length=10.0, width=5.0, height=3.0))
     assert isinstance(box, Success) and box.shape_id
@@ -297,8 +297,8 @@ def test_step_export_import_roundtrip(backend, tmp_path, extension):
 
 
 def test_stl_export_import_roundtrip(backend, tmp_path):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateBoxInput, ExportStlInput, ImportStlInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateBoxInput, ExportStlInput, ImportStlInput
 
     box = backend.create_box(CreateBoxInput(length=10.0, width=5.0, height=3.0))
     assert isinstance(box, Success) and box.shape_id
@@ -319,8 +319,8 @@ def test_stl_export_import_roundtrip(backend, tmp_path):
 
 
 def test_get_native_shape(backend):
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.schemas import CreateBoxInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateBoxInput
 
     box = backend.create_box(CreateBoxInput(length=5.0, width=5.0, height=5.0))
     assert isinstance(box, Success) and box.shape_id
@@ -337,9 +337,9 @@ def test_get_native_shape(backend):
 
 def test_kernel_with_occt_backend(backend):
     """Verify OpenCadKernel delegates to OcctBackend correctly."""
-    from opencad_kernel.core.models import Success
-    from opencad_kernel.operations.handlers import OpenCadKernel
-    from opencad_kernel.operations.schemas import CreateBoxInput
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.handlers import OpenCadKernel
+    from opencad.kernel.operations.schemas import CreateBoxInput
 
     kernel = OpenCadKernel(backend=backend)
     result = kernel.create_box(CreateBoxInput(length=5.0, width=5.0, height=5.0))

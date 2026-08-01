@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from opencad_kernel.client import result_to_dict
-from opencad_kernel.operations.registry import OperationRegistry
-from opencad_tree.models import FeatureNode, FeatureTree
+from opencad.kernel.client import result_to_dict
+from opencad.kernel.operations.registry import OperationRegistry
+from opencad.tree.models import FeatureNode, FeatureTree
 
 _REFERENCE_KEYS = ("shape_id", "shape_a_id", "shape_b_id", "base_id", "tool_id", "sketch_id")
 

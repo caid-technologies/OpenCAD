@@ -1,4 +1,4 @@
-"""HTTP-backed :class:`~opencad_kernel.client.KernelClient`.
+"""HTTP-backed :class:`~opencad.kernel.client.KernelClient`.
 
 This is the only place in the codebase that speaks HTTP *to* the kernel.
 Core packages take a ``KernelClient`` and stay transport-agnostic.

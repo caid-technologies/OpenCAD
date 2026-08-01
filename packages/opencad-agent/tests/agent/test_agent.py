@@ -8,10 +8,10 @@ from opencad_agent.models import ChatRequest
 from opencad_agent.prompting import build_code_generation_prompt, build_system_prompt
 from opencad_agent.service import AgentConfigurationError, OpenCadAgentService
 from opencad_agent.tools import ToolRuntime
-from opencad_kernel.client import LocalKernelClient
-from opencad_kernel.operations.handlers import OpenCadKernel
-from opencad_kernel.operations.registry import OperationRegistry
-from opencad_tree.models import FeatureNode, FeatureTree
+from opencad.kernel.client import LocalKernelClient
+from opencad.kernel.operations.handlers import OpenCadKernel
+from opencad.kernel.operations.registry import OperationRegistry
+from opencad.tree.models import FeatureNode, FeatureTree
 
 
 

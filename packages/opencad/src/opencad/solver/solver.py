@@ -5,7 +5,7 @@ from typing import Callable
 
 import numpy as np
 
-from opencad_solver.models import (
+from opencad.solver.models import (
     ArcEntity,
     CheckResult,
     CircleEntity,

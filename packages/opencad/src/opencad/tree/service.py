@@ -4,15 +4,15 @@ from collections.abc import Callable
 from copy import deepcopy
 from typing import Any
 
-from opencad_tree.expression import ExpressionError, evaluate as eval_expr, extract_symbols
-from opencad_tree.graph import (
+from opencad.tree.expression import ExpressionError, evaluate as eval_expr, extract_symbols
+from opencad.tree.graph import (
     CircularDependencyError,
     MissingDependencyError,
     descendants,
     direct_dependents,
     topological_order,
 )
-from opencad_tree.models import FeatureNode, FeatureTree, TypedParameter
+from opencad.tree.models import FeatureNode, FeatureTree, TypedParameter
 
 KernelClient = Callable[[FeatureNode, FeatureTree], str]
 

@@ -5,9 +5,9 @@ from opencad.kernel_adapter import (
     registry_result_to_dict,
     resolve_feature_references,
 )
-from opencad_kernel.operations.handlers import OpenCadKernel
-from opencad_kernel.operations.registry import OperationRegistry
-from opencad_tree.models import FeatureNode, FeatureTree
+from opencad.kernel.operations.handlers import OpenCadKernel
+from opencad.kernel.operations.registry import OperationRegistry
+from opencad.tree.models import FeatureNode, FeatureTree
 
 
 def test_normalize_feature_operation_maps_aliases() -> None:

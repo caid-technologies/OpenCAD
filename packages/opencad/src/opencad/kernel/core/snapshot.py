@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from opencad_kernel.core.op_log import OpLogEntry
+from opencad.kernel.core.op_log import OpLogEntry
 
 SNAPSHOT_VERSION = 1
 

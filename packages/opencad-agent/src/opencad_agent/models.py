@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from opencad_tree.models import FeatureTree
+from opencad.tree.models import FeatureTree
 
 
 class ChatHistoryItem(BaseModel):

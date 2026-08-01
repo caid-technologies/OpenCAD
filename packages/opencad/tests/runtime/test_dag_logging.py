@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from opencad import Part, Sketch, get_default_context, reset_default_context
-from opencad_tree.service import FeatureTreeService
+from opencad.tree.service import FeatureTreeService
 
 
 def test_each_headless_call_writes_feature_node() -> None:

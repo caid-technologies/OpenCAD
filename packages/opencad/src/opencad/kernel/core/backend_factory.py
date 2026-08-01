@@ -10,9 +10,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from opencad_kernel.core.analytic_backend import AnalyticBackend
-from opencad_kernel.core.backend import KernelBackend
-from opencad_kernel.core.store import IdStrategy
+from opencad.kernel.core.analytic_backend import AnalyticBackend
+from opencad.kernel.core.backend import KernelBackend
+from opencad.kernel.core.store import IdStrategy
 
 BackendName = Literal["analytic", "auto", "occt"]
 
@@ -45,7 +45,7 @@ def create_backend(
         return AnalyticBackend(id_strategy=id_strategy)
 
     try:
-        from opencad_kernel.core.occt_backend import HAS_OCCT, OcctBackend
+        from opencad.kernel.core.occt_backend import HAS_OCCT, OcctBackend
     except ImportError as exc:
         if name == "occt" or require_native:
             raise BackendUnavailableError(

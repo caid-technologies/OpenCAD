@@ -30,6 +30,6 @@ def test_client_accepts_explicit_base_url() -> None:
 
 
 def test_client_satisfies_the_kernel_client_protocol() -> None:
-    from opencad_kernel.client import KernelClient
+    from opencad.kernel.client import KernelClient
 
     assert isinstance(HttpKernelClient("http://127.0.0.1:8000/kernel"), KernelClient)

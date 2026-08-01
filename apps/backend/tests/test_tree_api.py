@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from opencad_server.tree_router import app
-from opencad_tree.models import FeatureNode, FeatureTree
+from opencad.tree.models import FeatureNode, FeatureTree
 
 
 def _build_12_node_tree(root_id: str = "base") -> FeatureTree:

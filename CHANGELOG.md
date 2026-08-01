@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Core modules nested under `opencad` (breaking)
+
+The `opencad_` prefix restated the distribution name on every import, so the
+three sibling packages became subpackages of `opencad` instead:
+
+| Before | After |
+|--------|-------|
+| `opencad_kernel` | `opencad.kernel` |
+| `opencad_solver` | `opencad.solver` |
+| `opencad_tree` | `opencad.tree` |
+
+```python
+from opencad_kernel.client import KernelClient   # before
+from opencad.kernel.client import KernelClient   # after
+```
+
+`from opencad import Part, Sketch` is unchanged. The distribution now ships a
+single top-level name, `opencad`, so it claims nothing generic in
+`site-packages`.
+
+`opencad_agent` and `opencad_server` are unchanged; they belong to separate
+distributions where the prefix identifies the project.
+
 ### Core split out of the backend (breaking)
 
 The repository is now a uv workspace of three independently installable
@@ -31,7 +54,7 @@ Migration:
 
 - All FastAPI routing moved out of the core packages; they no longer import
   FastAPI, Starlette, httpx, or python-dotenv.
-- Added `opencad_kernel.client.KernelClient`, a transport-agnostic protocol with
+- Added `opencad.kernel.client.KernelClient`, a transport-agnostic protocol with
   an in-process `LocalKernelClient`. The HTTP implementation
   (`opencad_server.http_kernel_client.HttpKernelClient`) is wired in at the
   composition root, replacing the ad-hoc httpx calls that lived in

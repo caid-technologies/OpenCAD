@@ -14,13 +14,13 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from opencad_kernel.core.models import (
+from opencad.kernel.core.models import (
     BoundingBox,
     SubshapeKind,
     SubshapeRef,
     TopologyMap,
 )
-from opencad_kernel.operations.schemas import SelectorQuery
+from opencad.kernel.operations.schemas import SelectorQuery
 
 # ── Direction → tag mapping ─────────────────────────────────────────
 

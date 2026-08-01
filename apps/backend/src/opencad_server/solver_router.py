@@ -10,10 +10,10 @@ from typing import Any
 from fastapi import APIRouter, FastAPI
 
 from opencad.version import __version__
-from opencad_solver.backend import SolverBackend
-from opencad_solver.models import CheckResult, ConstraintDiagnostics, Sketch, SolveResult
-from opencad_solver.solver import PythonSolverBackend
-from opencad_solver.solvespace_backend import SolveSpaceBackend, is_available as slvs_available
+from opencad.solver.backend import SolverBackend
+from opencad.solver.models import CheckResult, ConstraintDiagnostics, Sketch, SolveResult
+from opencad.solver.solver import PythonSolverBackend
+from opencad.solver.solvespace_backend import SolveSpaceBackend, is_available as slvs_available
 from opencad_server.api_app import create_api_app
 
 router = APIRouter()

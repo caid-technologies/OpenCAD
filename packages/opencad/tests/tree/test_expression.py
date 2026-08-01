@@ -6,7 +6,7 @@ import math
 
 import pytest
 
-from opencad_tree.expression import ExpressionError, evaluate, extract_symbols
+from opencad.tree.expression import ExpressionError, evaluate, extract_symbols
 
 
 # ── Basic arithmetic ────────────────────────────────────────────────

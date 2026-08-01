@@ -148,9 +148,9 @@ if HAS_OCCT:  # pragma: no branch
 
     TopTools_ListOfShape = importlib.import_module("OCP.TopTools").TopTools_ListOfShape
 
-from opencad_kernel.core.checks import check_bbox_overlap, check_manifold, check_nonzero_volume
-from opencad_kernel.core.errors import ErrorCode, make_failure
-from opencad_kernel.core.models import (
+from opencad.kernel.core.checks import check_bbox_overlap, check_manifold, check_nonzero_volume
+from opencad.kernel.core.errors import ErrorCode, make_failure
+from opencad.kernel.core.models import (
     BoundingBox,
     MeshData,
     MeshFaceGroup,
@@ -161,9 +161,9 @@ from opencad_kernel.core.models import (
     Success,
     TopologyMap,
 )
-from opencad_kernel.core.store import IdStrategy, ShapeStore
-from opencad_kernel.core.topology import _auto_tags_for_normal
-from opencad_kernel.operations.schemas import (
+from opencad.kernel.core.store import IdStrategy, ShapeStore
+from opencad.kernel.core.topology import _auto_tags_for_normal
+from opencad.kernel.operations.schemas import (
     BooleanInput,
     ChamferEdgesInput,
     CircularPatternInput,

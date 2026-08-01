@@ -174,7 +174,7 @@ assembly tree) rather than geometric or historical.
 
 ## How This Fits OpenCAD's Architecture
 
-OpenCAD's current topology system (`opencad_kernel/core/topology.py`) uses
+OpenCAD's current topology system (`opencad/kernel/core/topology.py`) uses
 **synthetic face generation** based on shape kind and bounding box.  This is
 sufficient for Phase 1 assembly mates (which target entire shape faces by
 index) but will not survive:
@@ -185,13 +185,13 @@ index) but will not survive:
 
 Any Phase 2 proposal must integrate with:
 
-- **Kernel backend protocol** (`packages/opencad/src/opencad_kernel/core/backend.py`) — topology
+- **Kernel backend protocol** (`packages/opencad/src/opencad/kernel/core/backend.py`) — topology
   identity must work across analytic and OCCT backends.
-- **Operation registry** (`opencad_kernel/operations/registry.py`) — every
+- **Operation registry** (`opencad/kernel/operations/registry.py`) — every
   registered operation must participate in the identity protocol.
-- **Feature tree** (`opencad_tree/`) — face identity must compose with the
+- **Feature tree** (`opencad/tree/`) — face identity must compose with the
   existing DAG rebuild and stale-propagation semantics.
-- **Solver diagnostics** (`opencad_solver/`) — the constraint introspection
+- **Solver diagnostics** (`opencad/solver/`) — the constraint introspection
   API should be able to report *which face references are stale*.
 
 ---

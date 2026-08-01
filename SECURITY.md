@@ -11,7 +11,7 @@ Security fixes are applied to the default branch first. Point releases are creat
 Do not open public issues for vulnerabilities.
 
 Send a private report with:
-- Affected component (`opencad_kernel`, `opencad_solver`, `opencad_tree`, `opencad_agent`, or `opencad_viewport`)
+- Affected component (`opencad.kernel`, `opencad.solver`, `opencad.tree`, `opencad_agent`, or `opencad_viewport`)
 - Reproduction steps and impact
 - Proof-of-concept details (minimal)
 - Suggested mitigation if available

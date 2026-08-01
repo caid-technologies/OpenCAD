@@ -4,9 +4,9 @@ A modular CAD system for parametric, programmable, and AI-assisted design
 
 ## Components
 
-- `opencad_kernel` — geometry kernel and typed operation registry
-- `opencad_solver` — 2D sketch constraint solving (SolveSpace + Python fallback)
-- `opencad_tree` — parametric feature-tree DAG (CRUD + rebuild + stale propagation)
+- `opencad.kernel` — geometry kernel and typed operation registry
+- `opencad.solver` — 2D sketch constraint solving (SolveSpace + Python fallback)
+- `opencad.tree` — parametric feature-tree DAG (CRUD + rebuild + stale propagation)
 - `opencad_agent` — AI agent that plans and executes operations
 - `opencad_server` — FastAPI transport mounting all of the above
 - `opencad_viewport` — React + Three.js viewport UI (mock mode by default)

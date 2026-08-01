@@ -4,11 +4,11 @@ import json
 
 import pytest
 
-from opencad_kernel.core.errors import ErrorCode, Failure
-from opencad_kernel.core.models import BoundingBox, Success
-from opencad_kernel.operations.handlers import OpenCadKernel
-from opencad_kernel.operations.registry import OperationRegistry
-from opencad_kernel.operations.schemas import (
+from opencad.kernel.core.errors import ErrorCode, Failure
+from opencad.kernel.core.models import BoundingBox, Success
+from opencad.kernel.operations.handlers import OpenCadKernel
+from opencad.kernel.operations.registry import OperationRegistry
+from opencad.kernel.operations.schemas import (
     BooleanInput,
     CreateBoxInput,
     CreateCylinderInput,
