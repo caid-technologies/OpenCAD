@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opencad-agent"
-version = "0.1.1"
+version = "0.2.0"
 description = "OpenCAD AI agent — natural-language modelling on top of the OpenCAD core"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 # Depends on the core distribution and nothing web-facing.
 dependencies = [
-  "opencad",
+  "opencad==0.2.0",
   "pydantic>=2",
 ]
 

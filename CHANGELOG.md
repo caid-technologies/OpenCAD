@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-08-01
 
 ### Viewport split into a publishable npm package
 
@@ -31,6 +31,15 @@ Repository-level changes: a pnpm workspace at the root (the lockfile moved
 from `apps/opencad_viewport/pnpm-lock.yaml`), the frontend Docker build now
 takes the repository root as its context, and CI builds the library, builds
 the app against it, and verifies the publishable tarball.
+
+### Release engineering
+
+- Pinned the cross-package dependencies. `opencad-agent` and `opencad-backend`
+  previously published `Requires-Dist: opencad` with no version bound, so pip
+  could pair a new agent with a core predating `adopt_tree()` and the
+  `opencad.kernel.*` layout. They now pin the exact release version.
+- All four distributions version in lockstep: `opencad`, `opencad-agent`,
+  `opencad-backend`, and the npm package `opencad-viewport`.
 
 ### Core modules nested under `opencad` (breaking)
 
