@@ -1,8 +1,8 @@
 {
   "name": "opencad-viewport",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "React + Three.js viewport components for OpenCAD — 3D viewport, feature tree, sketch editor, and chat panel",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/caid-technologies/OpenCAD.git",
