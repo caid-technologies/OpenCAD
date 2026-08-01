@@ -22,15 +22,19 @@ RUN apt-get update \
         libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml README.md ./
+COPY README.md ./
+COPY packages ./packages
 COPY apps/backend ./apps/backend
 
+# Install in dependency order: core, then agent, then the HTTP layer.
 RUN python -m pip install --upgrade pip \
-    && python -m pip install ".[full]"
+    && python -m pip install "./packages/opencad[full]" \
+    && python -m pip install "./packages/opencad-agent[llm]" \
+    && python -m pip install "./apps/backend[stream]"
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/kernel/healthz', timeout=3).read()" || exit 1
 
-CMD ["python", "-m", "uvicorn", "api:app", "--app-dir", "apps/backend", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "opencad_server.app:app", "--host", "0.0.0.0", "--port", "8000"]

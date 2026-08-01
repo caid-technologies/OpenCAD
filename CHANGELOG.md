@@ -1,5 +1,48 @@
 # Changelog
 
+## Unreleased
+
+### Core split out of the backend (breaking)
+
+The repository is now a uv workspace of three independently installable
+distributions. The core no longer lives inside the backend application.
+
+- `opencad` (`packages/opencad`) — kernel, solver, feature tree, fluent API, and
+  CLI. Depends on pydantic and numpy only.
+- `opencad-agent` (`packages/opencad-agent`) — the LLM agent. Depends on
+  `opencad`; LiteLLM moved behind an `[llm]` extra.
+- `opencad-backend` (`apps/backend`) — FastAPI transport, importable as
+  `opencad_server`. The only distribution that depends on a web framework.
+
+Migration:
+
+- `uvicorn api:app --app-dir apps/backend` → `uvicorn opencad_server.app:app`
+  (the `api:app` shim is gone).
+- `uv sync --extra test --extra server` → `uv sync --all-packages --group test`.
+- `pip install opencad` no longer installs FastAPI, httpx, python-dotenv, or the
+  agent. Install `opencad-agent[llm]` or `opencad-backend` for those.
+- `RuntimeContext.chat(message)` → `opencad_agent.run_chat(context, message)`,
+  so the core no longer imports the agent.
+- `RuntimeContext._sync_counters()` is now the public `sync_counters()`, and
+  `adopt_tree()` replaces the tree plus its ID counters and cursors.
+- CI runs a job per package with only that package's dependencies installed.
+
+### HTTP layer separation
+
+- All FastAPI routing moved out of the core packages; they no longer import
+  FastAPI, Starlette, httpx, or python-dotenv.
+- Added `opencad_kernel.client.KernelClient`, a transport-agnostic protocol with
+  an in-process `LocalKernelClient`. The HTTP implementation
+  (`opencad_server.http_kernel_client.HttpKernelClient`) is wired in at the
+  composition root, replacing the ad-hoc httpx calls that lived in
+  `opencad_agent.tools` and the feature-tree API.
+- `RuntimeContext`, `OpenCadAgentService`, and `ToolRuntime` now take a
+  `kernel_client` instead of `kernel_call`/`kernel_topology_call` callables.
+- Moved `fastapi`, `httpx`, `python-dotenv`, and `uvicorn` into the backend
+  distribution; they are no longer dependencies of the core.
+- Added `apps/backend/tests/test_core_boundary.py`, which fails if any core
+  module imports the web layer or a web/network library.
+
 ## 0.1.1 - 2026-04-24
 
 - Fixed Python package discovery for the `apps/backend/` source layout.

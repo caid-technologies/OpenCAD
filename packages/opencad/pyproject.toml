@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opencad"
+version = "0.1.1"
+description = "OpenCAD core — geometry kernel, constraint solver, feature tree, and fluent modelling API"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+# Core only. No web framework, no HTTP client — see
+# apps/backend/tests/test_core_boundary.py.
+dependencies = [
+  "pydantic>=2",
+  "numpy>=2",
+]
+
+[project.scripts]
+opencad = "opencad.cli:main"
+
+[project.optional-dependencies]
+occt = [
+  "cadquery>=2.4",
+  "cadquery-ocp>=7.7",
+]
+solver = [
+  "scipy>=1.12",
+]
+graph = [
+  "networkx>=3",
+]
+full = [
+  "cadquery>=2.4",
+  "cadquery-ocp>=7.7",
+  "scipy>=1.12",
+  "networkx>=3",
+]
+
+[dependency-groups]
+test = [
+  "pytest>=8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -94,4 +94,4 @@ The first validated slice is SimCorrect Problem 1:
 - SimCorrect target: `link2_length`
 - Expected patch: `forearm_length` from `0.25` to `0.30`
 
-OpenCAD covers this with `apps/backend/opencad/tests/test_caid_golden_loop.py`. SimCorrect covers the corresponding fixture with `tests/test_golden_loop_fixture.py`.
+OpenCAD covers this with `packages/opencad/tests/runtime/test_caid_golden_loop.py`. SimCorrect covers the corresponding fixture with `tests/test_golden_loop_fixture.py`.

@@ -8,16 +8,34 @@ A modular CAD system for parametric, programmable, and AI-assisted design
 - `opencad_solver` — 2D sketch constraint solving (SolveSpace + Python fallback)
 - `opencad_tree` — parametric feature-tree DAG (CRUD + rebuild + stale propagation)
 - `opencad_agent` — AI agent that plans and executes operations
+- `opencad_server` — FastAPI transport mounting all of the above
 - `opencad_viewport` — React + Three.js viewport UI (mock mode by default)
 
 ## Layout
 
+This is a uv workspace of three independently installable Python
+distributions plus the frontend. The core carries no web framework: the
+dependency arrow runs core ← agent ← backend and never the other way.
+
 ```text
+packages/
+├── opencad/             # dist: opencad — kernel, solver, tree, fluent API, CLI
+│   ├── src/             #   pydantic + numpy only. No FastAPI, no httpx.
+│   └── tests/
+└── opencad-agent/       # dist: opencad-agent — LLM modelling on the core
+    ├── src/             #   depends on opencad; [llm] extra adds LiteLLM
+    └── tests/
 apps/
-├── backend/             # Python API, kernel, solver, tree, and agent
+├── backend/             # dist: opencad-backend — the only FastAPI consumer
+│   ├── src/             #   opencad_server: routers, app factory, HTTP client
+│   └── tests/
 └── opencad_viewport/    # React + Three.js frontend
 scripts/                 # Development and smoke-test scripts
 ```
+
+Each package installs and tests on its own; CI runs a job per package with
+only that package's dependencies present, so a core module that reaches for
+the backend fails the build.
 
 ## Quickstart
 
@@ -25,34 +43,39 @@ scripts/                 # Development and smoke-test scripts
 
 ### 1. Install
 
-For a packaged install (for example from a wheel or a PyPI release), use:
+For a packaged install, pick the layer you need — each is independent:
 
 ```bash
-uv pip install opencad
+uv pip install "opencad[occt]"        # core only: kernel, solver, tree, fluent API
+uv pip install "opencad-agent[llm]"   # + natural-language modelling
+uv pip install opencad-backend        # + the FastAPI HTTP service
 ```
 
 For local development from this repository:
 
 ```bash
-uv sync --extra test --extra server --extra occt
+uv sync --all-packages --all-extras --group test
 cp .env.example .env
 ```
 
-Install optional integrations as needed, for example:
+To work on one package in isolation, sync only its dependencies:
 
 ```bash
-uv sync --extra llm
-uv sync --extra full
+uv sync --package opencad --group test          # core alone, no web stack
+uv sync --package opencad-agent --group test    # core + agent
+uv sync --package opencad-backend --group test  # everything
 ```
 
 ### 2. Start backend services
 
-Each service runs on its own port:
-
 ```bash
-cd apps/backend
-uv run --extra server --extra occt python -m uvicorn api:app --reload --port 8000
+uv run --package opencad-backend --extra occt \
+  python -m uvicorn opencad_server.app:app --reload --port 8000
 ```
+
+`opencad_server.app` mounts every service router under one process. To run a
+single service standalone, point uvicorn at its router module instead — for
+example `opencad_server.kernel_router:app` or `opencad_server.solver_router:app`.
 
 ### Run the dev script
 
@@ -161,8 +184,19 @@ See `SECURITY.md` for coordinated vulnerability reporting.
 
 ## Testing
 
+Run the whole workspace:
+
 ```bash
+uv sync --all-packages --group test
 uv run --no-sync python -m pytest
+```
+
+Or test one package with only its own dependencies installed — this is what CI
+does, and it is what keeps the core independent of the backend:
+
+```bash
+uv sync --package opencad --group test
+cd packages/opencad && uv run --no-sync --package opencad --project ../.. python -m pytest
 ```
 
 ## Headless Scripting
