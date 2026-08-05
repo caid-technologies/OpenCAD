@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Self
 
 from opencad.kernel.operations.schemas import SelectorQuery
@@ -306,22 +305,8 @@ class Part:
         return [ref.id for ref in refs]
 
     def export(self, filepath: str) -> Self:
-        """Export the active shape based on the destination extension."""
-        suffix = Path(filepath).suffix.lower()
-        if suffix in {".step", ".stp"}:
-            return self.export_step(filepath)
-        if suffix == ".stl":
-            return self.export_stl(filepath)
-        raise ValueError("Unsupported export format. Use a .step, .stp, or .stl destination.")
-
-    def export_step(self, filepath: str) -> Self:
         _, shape_id = self._require_shape()
         self._context.export_step(shape_id, filepath)
-        return self
-
-    def export_stl(self, filepath: str) -> Self:
-        _, shape_id = self._require_shape()
-        self._context.export_stl(shape_id, filepath)
         return self
 
     def export_design_artifact(
@@ -340,3 +325,4 @@ class Part:
             simulation_tags=simulation_tags,
         )
         return self
+

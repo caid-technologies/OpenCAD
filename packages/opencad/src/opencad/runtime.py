@@ -166,11 +166,6 @@ class RuntimeContext:
         if not response.get("ok"):
             raise RuntimeError(f"Export failed: {response.get('message', 'unknown error')}")
 
-    def export_stl(self, shape_id: str, filepath: str) -> None:
-        response = registry_result_to_dict(self.registry, "export_stl", {"shape_id": shape_id, "filepath": filepath})
-        if not response.get("ok"):
-            raise RuntimeError(f"Export failed: {response.get('message', 'unknown error')}")
-
     def serialize_tree(self) -> str:
         return FeatureTreeService.serialize(self.tree)
 

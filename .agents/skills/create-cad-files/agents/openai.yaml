@@ -1,4 +1,0 @@
-interface:
-  display_name: "Create CAD Files"
-  short_description: "Create validated STEP and STL models"
-  default_prompt: "Use $create-cad-files to create a dimensioned CAD model and export it as STEP or STL."

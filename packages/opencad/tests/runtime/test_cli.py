@@ -68,32 +68,16 @@ def test_cli_run_export_and_tree(tmp_path: Path) -> None:
     assert not cq.importers.importStep(str(step_path)).val().isNull()
 
 
-def test_cli_run_stl_export(tmp_path: Path) -> None:
-    if importlib.util.find_spec("cadquery") is None or importlib.util.find_spec("OCP") is None:
-        pytest.skip("CadQuery/OCP not installed")
-
-    script_path = tmp_path / "model.py"
-    stl_path = tmp_path / "result.stl"
-    script_path.write_text("from opencad import Part\nPart().box(10, 8, 3)\n", encoding="utf-8")
-
-    code = main(["run", str(script_path), "--export", str(stl_path), "--backend", "occt"])
-
-    assert code == 0
-    assert stl_path.exists()
-    assert stl_path.stat().st_size > 84
-
-
-@pytest.mark.parametrize("extension", ["step", "stl"])
-def test_cli_rejects_analytic_cad_export(tmp_path: Path, extension: str) -> None:
+def test_cli_rejects_analytic_step_export(tmp_path: Path) -> None:
     script_path = tmp_path / "model.py"
     script_path.write_text("from opencad import Part\nPart().box(1, 1, 1)\n", encoding="utf-8")
 
-    with pytest.raises(BackendUnavailableError, match="cannot export a real STEP or STL file"):
+    with pytest.raises(BackendUnavailableError, match="cannot export a real STEP file"):
         main([
             "run",
             str(script_path),
             "--export",
-            str(tmp_path / f"invalid.{extension}"),
+            str(tmp_path / "invalid.step"),
             "--backend",
             "analytic",
         ])
@@ -131,11 +115,3 @@ def test_cli_tree_only_run_supports_analytic_backend(tmp_path: Path) -> None:
 
     assert code == 0
     assert tree_path.exists()
-
-
-def test_cli_rejects_unknown_export_extension(tmp_path: Path) -> None:
-    script_path = tmp_path / "model.py"
-    script_path.write_text("from opencad import Part\nPart().box(1, 1, 1)\n", encoding="utf-8")
-
-    with pytest.raises(ValueError, match=".step, .stp, or .stl"):
-        main(["run", str(script_path), "--export", str(tmp_path / "result.obj")])
