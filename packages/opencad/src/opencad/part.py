@@ -110,6 +110,81 @@ class Part:
             tree_parameters={"sketch_id": sketch.feature_id, "distance": depth, "both": both},
         )
 
+    def revolve(
+        self,
+        sketch: Sketch,
+        *,
+        axis_origin: tuple[float, float, float] = (0.0, 0.0, 0.0),
+        axis_direction: tuple[float, float, float] = (0.0, 0.0, 1.0),
+        angle: float = 360.0,
+        name: str = "Revolve",
+    ) -> Self:
+        """Sweep a profile around an axis. The profile must not cross the axis."""
+        sketch_shape_id = sketch.build()
+        if sketch.feature_id is None:
+            raise RuntimeError("Sketch was built without a feature ID.")
+        return self._apply(
+            "revolve",
+            {
+                "shape_id": sketch_shape_id,
+                "axis_origin": axis_origin,
+                "axis_direction": axis_direction,
+                "angle": angle,
+            },
+            feature_name=name,
+            sketch_id=sketch.feature_id,
+            tree_parameters={
+                "shape_id": sketch.feature_id,
+                "axis_origin": axis_origin,
+                "axis_direction": axis_direction,
+                "angle": angle,
+            },
+        )
+
+    def loft(
+        self,
+        sketches: list[Sketch],
+        *,
+        solid: bool = True,
+        ruled: bool = False,
+        name: str = "Loft",
+    ) -> Self:
+        """Blend through two or more ordered profiles."""
+        if len(sketches) < 2:
+            raise ValueError("Loft needs at least two profiles.")
+        shape_ids = [sketch.build() for sketch in sketches]
+        feature_ids = [sketch.feature_id for sketch in sketches]
+        if any(feature_id is None for feature_id in feature_ids):
+            raise RuntimeError("Sketch was built without a feature ID.")
+        return self._apply(
+            "loft",
+            {"profile_ids": shape_ids, "solid": solid, "ruled": ruled},
+            feature_name=name,
+            depends_on=feature_ids,
+            tree_parameters={
+                "profile_ids": feature_ids,
+                "solid": solid,
+                "ruled": ruled,
+            },
+        )
+
+    def sweep(self, profile: Sketch, path: Sketch, *, name: str = "Sweep") -> Self:
+        """Drag a profile along a path wire."""
+        profile_shape_id = profile.build()
+        path_shape_id = path.build()
+        if profile.feature_id is None or path.feature_id is None:
+            raise RuntimeError("Sketch was built without a feature ID.")
+        return self._apply(
+            "sweep",
+            {"profile_id": profile_shape_id, "path_id": path_shape_id},
+            feature_name=name,
+            depends_on=[profile.feature_id, path.feature_id],
+            tree_parameters={
+                "profile_id": profile.feature_id,
+                "path_id": path.feature_id,
+            },
+        )
+
     def union(self, other: Part, *, name: str = "Union") -> Self:
         left_feature, left_shape = self._require_shape()
         right_feature, right_shape = other._require_shape()

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib.util
+import math
 from pathlib import Path
 
 import pytest
@@ -74,3 +76,87 @@ def test_fluent_sketch_writes_profile_order_metadata() -> None:
     assert isinstance(profile_order, list)
     assert len(profile_order) == len(entities)
     assert any(bool(v.get("subtract")) for v in entities.values() if v.get("type") == "circle")
+
+
+# ── Revolve / loft / sweep ──────────────────────────────────────────
+
+
+def test_fluent_revolve_records_its_sketch() -> None:
+    reset_default_context()
+    profile = Sketch(name="Ring section", plane="XZ").rect(5, 8, origin=(10.0, 0.0))
+    part = Part().revolve(profile, axis_direction=(0.0, 0.0, 1.0), angle=360.0)
+
+    ctx = get_default_context()
+    assert part.feature_id is not None
+    node = ctx.tree.nodes[part.feature_id]
+
+    assert node.operation == "revolve"
+    assert node.sketch_id == profile.feature_id
+    assert node.parameters["shape_id"] == profile.feature_id
+    assert node.parameters["angle"] == 360.0
+
+
+def test_fluent_loft_records_every_profile() -> None:
+    reset_default_context()
+    bottom = Sketch(name="Bottom").circle(5.0)
+    top = Sketch(name="Top", origin=(0.0, 0.0, 10.0)).circle(2.0)
+    part = Part().loft([bottom, top])
+
+    ctx = get_default_context()
+    assert part.feature_id is not None
+    node = ctx.tree.nodes[part.feature_id]
+
+    assert node.operation == "loft"
+    assert node.parameters["profile_ids"] == [bottom.feature_id, top.feature_id]
+    assert node.depends_on == [bottom.feature_id, top.feature_id]
+
+
+def test_fluent_loft_rejects_a_single_profile() -> None:
+    reset_default_context()
+    with pytest.raises(ValueError, match="at least two profiles"):
+        Part().loft([Sketch().circle(5.0)])
+
+
+def test_fluent_sweep_records_profile_and_path() -> None:
+    reset_default_context()
+    profile = Sketch(name="Profile").circle(1.0)
+    path = Sketch(name="Path", plane="XZ").line((0.0, 0.0), (0.0, 20.0))
+    part = Part().sweep(profile, path)
+
+    ctx = get_default_context()
+    assert part.feature_id is not None
+    node = ctx.tree.nodes[part.feature_id]
+
+    assert node.operation == "sweep"
+    assert node.parameters["profile_id"] == profile.feature_id
+    assert node.parameters["path_id"] == path.feature_id
+    assert node.depends_on == [profile.feature_id, path.feature_id]
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("OCP") is None, reason="CadQuery/OCP not installed"
+)
+def test_fluent_revolve_builds_a_real_annulus() -> None:
+    """A rectangle offset from the axis sweeps into a tube, so the result is
+    checkable against pi * (ro^2 - ri^2) * h."""
+    import cadquery as cq
+
+    from opencad.kernel.core.backend_factory import create_backend
+    from opencad.runtime import RuntimeContext, set_default_context
+
+    ctx = RuntimeContext(backend=create_backend("occt", require_native=True))
+    set_default_context(ctx)
+    try:
+        inner, thickness, height = 10.0, 5.0, 8.0
+        profile = Sketch(name="Tube section", plane="XZ").rect(
+            thickness, height, origin=(inner, 0.0)
+        )
+        part = Part().revolve(profile)
+
+        assert part.shape_id is not None
+        native = ctx.registry.kernel.get_native_shape(part.shape_id)
+        outer = inner + thickness
+        expected = math.pi * (outer**2 - inner**2) * height
+        assert cq.Shape(native).Volume() == pytest.approx(expected, rel=0.001)
+    finally:
+        reset_default_context()
