@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -16,7 +18,19 @@ def client(monkeypatch) -> TestClient:
     return TestClient(kernel_api.app)
 
 
-@pytest.mark.parametrize("file_format", ["step", "stp", "stl"])
+_NATIVE_EXCHANGE_FORMATS = [
+    pytest.param(
+        file_format,
+        marks=pytest.mark.skipif(
+            os.environ.get("OPENCAD_KERNEL_BACKEND") == "analytic",
+            reason="STEP export requires the native OCCT backend",
+        ),
+    )
+    for file_format in ("step", "stp")
+]
+
+
+@pytest.mark.parametrize("file_format", [*_NATIVE_EXCHANGE_FORMATS, "stl"])
 def test_browser_export_import_roundtrip(client: TestClient, file_format: str) -> None:
     created = client.post(
         "/operations/create_box",

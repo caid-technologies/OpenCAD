@@ -1,8 +1,18 @@
 from __future__ import annotations
 
+import os
+
+import pytest
+
 from opencad import reset_default_context
 
 from opencad_agent import run_chat
+
+
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("OPENCAD_LLM_MODEL"),
+    reason="requires OPENCAD_LLM_MODEL for a live integration test",
+)
 
 
 def test_runtime_chat_executes_in_process() -> None:

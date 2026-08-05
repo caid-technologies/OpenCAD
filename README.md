@@ -2,6 +2,25 @@
 
 A modular CAD system for parametric, programmable, and AI-assisted design
 
+## Install for Claude or Codex
+
+Install the OpenCAD skill with one command:
+
+```bash
+npx skills add caid-technologies/OpenCAD
+```
+
+Then ask the agent normally:
+
+```text
+Create a 72 mm round spray bottle and give me STEP and STL files.
+```
+
+The agent writes the parametric source, builds real OCCT geometry, validates
+the artifacts, and returns clickable file paths. No manual Python or CLI work
+is required from the user. The repository also ships provider-native manifests
+under `.codex-plugin/` and `.claude-plugin/`.
+
 ## Components
 
 - `opencad.kernel` — geometry kernel and typed operation registry
@@ -244,13 +263,22 @@ part.export_design_artifact(
 ```bash
 opencad build model.json --output model.built.json
 opencad run model.py --export output.step --tree-output output-tree.json
+opencad run model.py --export output.stl --tree-output output-tree.json
 ```
 
-STEP export uses the native OCCT backend. Install it with
+STEP and STL export use the native OCCT backend. Install it with
 `uv sync --extra occt`; the CLI's default `--backend auto` mode selects it
 automatically whenever `--export` is requested. The analytic backend can be
 selected explicitly for tree-only validation with `--backend analytic`, but it
-does not produce STEP files.
+does not produce user-deliverable CAD files.
+
+## Claude and Codex skill
+
+The installable `create-cad-files` skill lives under `skills/create-cad-files`.
+Small repository adapters under `.agents/skills` and `.claude/skills` make the
+same workflow available automatically while developing OpenCAD. It turns a
+dimensional request into an OpenCAD Python model, then atomically exports and
+validates STEP, STP, or STL.
 
 ## Examples
 
@@ -262,6 +290,7 @@ device-development workflows:
 - `software_hmi_panel.py` — front panel for an operator interface with button and encoder cutouts
 - `firmware_programmer_fixture.py` — pogo-pin fixture plate for programming/debug access
 - `full_device_cable_grommet.py` — concentric cable grommet built from primitive booleans
+- `round_spray_bottle.py` — circular reservoir with an integrated trigger and nozzle
 
 Run an example from the repository root with:
 
