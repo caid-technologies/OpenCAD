@@ -2,6 +2,25 @@
 
 A modular CAD system for parametric, programmable, and AI-assisted design
 
+## Install for Claude or Codex
+
+Install the OpenCAD skill with one command:
+
+```bash
+npx skills add caid-technologies/OpenCAD
+```
+
+Then ask the agent normally:
+
+```text
+Create a 72 mm round spray bottle and give me STEP and STL files.
+```
+
+The agent writes the parametric source, builds real OCCT geometry, validates
+the artifacts, and returns clickable file paths. No manual Python or CLI work
+is required from the user. The repository also ships provider-native manifests
+under `.codex-plugin/` and `.claude-plugin/`.
+
 ## Components
 
 - `opencad.kernel` — geometry kernel and typed operation registry
@@ -255,10 +274,11 @@ does not produce user-deliverable CAD files.
 
 ## Claude and Codex skill
 
-The repository includes a shared `create-cad-files` skill under
-`.agents/skills/create-cad-files`, with a Claude Code adapter under
-`.claude/skills/create-cad-files`. It turns a dimensional request into an
-OpenCAD Python model, then atomically exports and validates STEP, STP, or STL.
+The installable `create-cad-files` skill lives under `skills/create-cad-files`.
+Small repository adapters under `.agents/skills` and `.claude/skills` make the
+same workflow available automatically while developing OpenCAD. It turns a
+dimensional request into an OpenCAD Python model, then atomically exports and
+validates STEP, STP, or STL.
 
 ## Examples
 

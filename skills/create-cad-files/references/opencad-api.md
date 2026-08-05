@@ -23,7 +23,7 @@ result = Part(name="Plate").extrude(profile, depth=THICKNESS, name="Plate body")
 result.fillet(edges="top", radius=0.75, name="Edge relief")
 ```
 
-The build script exports the runtime's last generated shape. Ensure the final operation belongs to the intended result.
+The build helper exports the runtime's last generated shape. Ensure the final operation belongs to the intended result.
 
 ## Sketches
 

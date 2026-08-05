@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import runpy
 import tempfile
 from pathlib import Path
 
@@ -24,6 +25,35 @@ def _temporary_path(destination: Path) -> Path:
     )
     handle.close()
     return Path(handle.name)
+
+
+def _run_model(model_path: Path, output_path: Path, tree_path: Path | None) -> int:
+    try:
+        from opencad.kernel.core.backend_factory import create_backend
+        from opencad.kernel_adapter import registry_result_to_dict
+        from opencad.runtime import RuntimeContext, set_default_context
+    except ImportError as exc:
+        raise RuntimeError(
+            'OpenCAD with OCCT is required. Install it with: pip install "opencad[occt]>=0.2.1"'
+        ) from exc
+
+    context = RuntimeContext(backend=create_backend("occt", require_native=True))
+    set_default_context(context)
+    runpy.run_path(str(model_path), run_name="__main__")
+    if not context.last_shape_id:
+        raise RuntimeError("The model produced no shape to export.")
+
+    operation = "export_stl" if output_path.suffix.lower() == ".stl" else "export_step"
+    result = registry_result_to_dict(
+        context.registry,
+        operation,
+        {"shape_id": context.last_shape_id, "filepath": str(output_path)},
+    )
+    if not result.get("ok"):
+        raise RuntimeError(f"CAD export failed: {result.get('message', 'unknown error')}")
+    if tree_path is not None:
+        context.save_tree_json(str(tree_path))
+    return len(context.tree.nodes) - 1
 
 
 def build_cad_file(
@@ -56,30 +86,9 @@ def build_cad_file(
     temporary_tree = _temporary_path(tree_path) if tree_path is not None else None
 
     try:
-        try:
-            from opencad.cli import main as opencad_main
-            from opencad.runtime import get_default_context
-        except ImportError as exc:
-            raise RuntimeError(
-                'OpenCAD with OCCT is required. Install it with: pip install "opencad[occt]"'
-            ) from exc
-
-        arguments = [
-            "run",
-            str(model_path),
-            "--export",
-            str(temporary_output),
-            "--backend",
-            "occt",
-        ]
-        if temporary_tree is not None:
-            arguments.extend(["--tree-output", str(temporary_tree)])
-        exit_code = opencad_main(arguments)
-        if exit_code != 0:
-            raise RuntimeError(f"OpenCAD exited with status {exit_code}.")
-
+        feature_count = _run_model(model_path, temporary_output, temporary_tree)
         summary = inspect_cad_file(temporary_output)
-        summary["features"] = len(get_default_context().tree.nodes) - 1
+        summary["features"] = feature_count
         os.replace(temporary_output, output_path)
         summary["path"] = str(output_path)
         if tree_path is not None and temporary_tree is not None:

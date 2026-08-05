@@ -1,0 +1,14 @@
+{
+  "name": "opencad",
+  "version": "0.1.0",
+  "description": "Generate validated STEP and STL models from natural-language requirements.",
+  "author": {
+    "name": "CAID Technologies",
+    "url": "https://github.com/caid-technologies"
+  },
+  "homepage": "https://github.com/caid-technologies/OpenCAD",
+  "repository": "https://github.com/caid-technologies/OpenCAD",
+  "license": "Apache-2.0",
+  "keywords": ["cad", "step", "stl", "3d-modeling"],
+  "skills": "./skills/"
+}
