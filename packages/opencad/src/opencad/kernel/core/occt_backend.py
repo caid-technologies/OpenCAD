@@ -69,14 +69,16 @@ TopAbs_EDGE = None
 TopAbs_FACE = None
 TopAbs_WIRE = None
 TopAbs_REVERSED = None
+TopExp = None
 TopExp_Explorer = None
 TopLoc_Location = None
 TopoDS = None
 TopoDS_Shape = Any
 StlAPI_Reader = None
 
-# Lists
+# Lists / maps
 TopTools_ListOfShape = None
+TopTools_IndexedMapOfShape = None
 
 if HAS_OCCT:  # pragma: no branch
     cq = importlib.import_module("cadquery")
@@ -137,7 +139,9 @@ if HAS_OCCT:  # pragma: no branch
     TopAbs_WIRE = topabs_mod.TopAbs_WIRE
     TopAbs_REVERSED = topabs_mod.TopAbs_REVERSED
 
-    TopExp_Explorer = importlib.import_module("OCP.TopExp").TopExp_Explorer
+    topexp_mod = importlib.import_module("OCP.TopExp")
+    TopExp = topexp_mod.TopExp
+    TopExp_Explorer = topexp_mod.TopExp_Explorer
     TopLoc_Location = importlib.import_module("OCP.TopLoc").TopLoc_Location
 
     topods_mod = importlib.import_module("OCP.TopoDS")
@@ -146,7 +150,9 @@ if HAS_OCCT:  # pragma: no branch
 
     StlAPI_Reader = importlib.import_module("OCP.StlAPI").StlAPI_Reader
 
-    TopTools_ListOfShape = importlib.import_module("OCP.TopTools").TopTools_ListOfShape
+    toptools_mod = importlib.import_module("OCP.TopTools")
+    TopTools_ListOfShape = toptools_mod.TopTools_ListOfShape
+    TopTools_IndexedMapOfShape = toptools_mod.TopTools_IndexedMapOfShape
 
 from opencad.kernel.core.checks import check_bbox_overlap, check_manifold, check_nonzero_volume
 from opencad.kernel.core.errors import ErrorCode, make_failure
@@ -230,28 +236,30 @@ def _is_manifold(shape: Any) -> bool:
     return analyzer.IsValid()
 
 
+def _edges_from_shape(shape: Any) -> list[Any]:
+    """Return each edge once, in stable first-encountered order.
+
+    An edge is shared by the faces that meet along it, and TopExp_Explorer
+    yields it once per face, so walking it directly reports a box's 12 edges
+    24 times. MapShapes indexes on shape identity, which collapses those
+    repeats while keeping traversal order.
+    """
+    edge_map = TopTools_IndexedMapOfShape()
+    TopExp.MapShapes_s(shape, TopAbs_EDGE, edge_map)
+    return [TopoDS.Edge_s(edge_map.FindKey(i)) for i in range(1, edge_map.Extent() + 1)]
+
+
 def _edge_list(shape: Any, shape_id: str) -> list[str]:
     """Enumerate edges and return deterministic IDs."""
-    ids: list[str] = []
-    explorer = TopExp_Explorer(shape, TopAbs_EDGE)
-    idx = 0
-    while explorer.More():
-        ids.append(f"{shape_id}:edge:{idx}")
-        idx += 1
-        explorer.Next()
-    return ids
+    return [f"{shape_id}:edge:{idx}" for idx in range(len(_edges_from_shape(shape)))]
 
 
 def _edge_by_index(shape: Any, index: int) -> Any:
     """Return the TopoDS_Edge at *index* for fillet operations."""
-    explorer = TopExp_Explorer(shape, TopAbs_EDGE)
-    i = 0
-    while explorer.More():
-        if i == index:
-            return TopoDS.Edge_s(explorer.Current())
-        i += 1
-        explorer.Next()
-    raise IndexError(f"Edge index {index} out of range (shape has {i} edges)")
+    edges = _edges_from_shape(shape)
+    if not 0 <= index < len(edges):
+        raise IndexError(f"Edge index {index} out of range (shape has {len(edges)} edges)")
+    return edges[index]
 
 
 def _face_list(shape: Any, shape_id: str) -> list[str]:
@@ -426,10 +434,7 @@ def _build_topology_map(shape: Any, shape_id: str) -> TopologyMap:
         explorer.Next()
 
     edge_refs: list[SubshapeRef] = []
-    explorer = TopExp_Explorer(shape, TopAbs_EDGE)
-    idx = 0
-    while explorer.More():
-        edge = TopoDS.Edge_s(explorer.Current())
+    for idx, edge in enumerate(_edges_from_shape(shape)):
         centroid = _edge_centroid(edge)
         length = _edge_length(edge)
         edge_refs.append(SubshapeRef(
@@ -440,8 +445,6 @@ def _build_topology_map(shape: Any, shape_id: str) -> TopologyMap:
             length=length,
             tags=[],
         ))
-        idx += 1
-        explorer.Next()
 
     return TopologyMap(shape_id=shape_id, faces=face_refs, edges=edge_refs)
 

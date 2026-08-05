@@ -39,6 +39,59 @@ def test_create_box(backend):
     assert len(result.shape.edge_ids) == 12  # A box has 12 edges
 
 
+def test_primitive_edges_are_counted_once_each(backend):
+    """Edges are shared between adjacent faces and TopExp_Explorer yields one
+    per face, so enumeration used to report a box's 12 edges as 24."""
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import (
+        CreateBoxInput,
+        CreateCylinderInput,
+        CreateSphereInput,
+    )
+
+    box = backend.create_box(CreateBoxInput(length=10.0, width=5.0, height=3.0))
+    cylinder = backend.create_cylinder(CreateCylinderInput(radius=2.0, height=5.0))
+    sphere = backend.create_sphere(CreateSphereInput(radius=3.0))
+    assert all(isinstance(r, Success) and r.shape for r in (box, cylinder, sphere))
+
+    # A box has 12 edges, an OCCT cylinder 3 (two rims and a seam), a sphere 3.
+    assert len(box.shape.edge_ids) == 12
+    assert len(cylinder.shape.edge_ids) == 3
+    assert len(sphere.shape.edge_ids) == 3
+
+
+def test_edge_ids_are_unique_and_match_the_topology_map(backend):
+    """shape.edge_ids and get_topology() must agree, since selectors resolve
+    against the topology map and then index back into the shape."""
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateBoxInput
+
+    box = backend.create_box(CreateBoxInput(length=10.0, width=5.0, height=3.0))
+    assert isinstance(box, Success) and box.shape is not None
+
+    edge_ids = box.shape.edge_ids
+    assert len(set(edge_ids)) == len(edge_ids)
+
+    topology = backend.get_topology(box.shape_id)
+    assert [edge.id for edge in topology.edges] == edge_ids
+
+
+def test_every_enumerated_edge_is_filletable(backend):
+    """A duplicated enumeration made 'all edges' pass the same edge twice and
+    left later indices unreachable."""
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateBoxInput, FilletEdgesInput
+
+    box = backend.create_box(CreateBoxInput(length=10.0, width=10.0, height=10.0))
+    assert isinstance(box, Success) and box.shape is not None
+
+    for edge_id in box.shape.edge_ids:
+        result = backend.fillet_edges(
+            FilletEdgesInput(shape_id=box.shape_id, edge_ids=[edge_id], radius=0.5)
+        )
+        assert isinstance(result, Success), f"{edge_id} could not be filleted"
+
+
 def test_create_cylinder(backend):
     from math import pi
 
