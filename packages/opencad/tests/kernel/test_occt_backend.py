@@ -357,6 +357,68 @@ def test_extrude_both_straddles_a_non_xy_sketch(backend):
     assert result.shape.bbox.max_y == pytest.approx(5, abs=0.01)
 
 
+# ── Sketch arcs ─────────────────────────────────────────────────────
+
+
+def _arc_sketch(backend, start, end, radius=10.0):
+    from opencad.kernel.operations.schemas import CreateSketchInput, SketchSegment
+
+    return backend.create_sketch(
+        CreateSketchInput(
+            segments=[
+                SketchSegment(
+                    type="arc", start=start, end=end, center=(0.0, 0.0), radius=radius
+                )
+            ]
+        )
+    )
+
+
+def test_sketch_arc_spans_only_its_own_quadrant(backend):
+    """The interior point was assumed to sit at (cx, cy + radius). For a quarter
+    arc starting there that collapsed onto an endpoint and GC_MakeArcOfCircle
+    raised 'no result', so any arc not apexed straight above the centre failed."""
+    from opencad.kernel.core.models import Success
+
+    result = _arc_sketch(backend, (10.0, 0.0), (0.0, 10.0))
+
+    assert isinstance(result, Success)
+    assert result.shape is not None
+    bbox = result.shape.bbox
+    assert bbox.min_x == pytest.approx(0.0, abs=0.01)
+    assert bbox.max_x == pytest.approx(10.0, abs=0.01)
+    assert bbox.min_y == pytest.approx(0.0, abs=0.01)
+    assert bbox.max_y == pytest.approx(10.0, abs=0.01)
+
+
+def test_sketch_arc_sweeps_counter_clockwise(backend):
+    """Swapping the endpoints takes the long way round, which is how a caller
+    asks for the major arc."""
+    from opencad.kernel.core.models import Success
+
+    result = _arc_sketch(backend, (0.0, 10.0), (10.0, 0.0))
+
+    assert isinstance(result, Success)
+    assert result.shape is not None
+    bbox = result.shape.bbox
+    assert bbox.min_x == pytest.approx(-10.0, abs=0.01)
+    assert bbox.min_y == pytest.approx(-10.0, abs=0.01)
+
+
+def test_sketch_arc_semicircle(backend):
+    from opencad.kernel.core.models import Success
+
+    result = _arc_sketch(backend, (10.0, 0.0), (-10.0, 0.0))
+
+    assert isinstance(result, Success)
+    assert result.shape is not None
+    bbox = result.shape.bbox
+    assert bbox.min_x == pytest.approx(-10.0, abs=0.01)
+    assert bbox.max_x == pytest.approx(10.0, abs=0.01)
+    assert bbox.min_y == pytest.approx(0.0, abs=0.01)
+    assert bbox.max_y == pytest.approx(10.0, abs=0.01)
+
+
 def test_tessellate_missing_shape(backend):
     with pytest.raises(ValueError, match="not found"):
         backend.tessellate("nonexistent")
