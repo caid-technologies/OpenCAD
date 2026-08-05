@@ -246,6 +246,64 @@ def test_extrude_sketch_with_subtractive_circle(backend):
     assert result.shape.volume == pytest.approx((100 - pi * 4) * 5, rel=0.01)
 
 
+def _rect_segments(width: float, height: float) -> list:
+    from opencad.kernel.operations.schemas import SketchSegment
+
+    return [
+        SketchSegment(type="line", start=(0, 0), end=(width, 0)),
+        SketchSegment(type="line", start=(width, 0), end=(width, height)),
+        SketchSegment(type="line", start=(width, height), end=(0, height)),
+        SketchSegment(type="line", start=(0, height), end=(0, 0)),
+    ]
+
+
+@pytest.mark.parametrize(("plane", "normal_axis"), [("XY", "z"), ("XZ", "y"), ("YZ", "x")])
+def test_extrude_raises_along_the_sketch_plane_normal(backend, plane, normal_axis):
+    """Extruding along Z regardless of plane swept XZ/YZ profiles within their
+    own plane, yielding a zero-volume shape that still reported success."""
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateSketchInput, ExtrudeInput
+
+    sketch = backend.create_sketch(
+        CreateSketchInput(plane=plane, segments=_rect_segments(20, 10))
+    )
+    assert isinstance(sketch, Success) and sketch.shape_id
+
+    result = backend.extrude(ExtrudeInput(sketch_id=sketch.shape_id, distance=5))
+
+    assert isinstance(result, Success)
+    assert result.shape is not None
+    assert result.shape.volume == pytest.approx(20 * 10 * 5, rel=0.01)
+
+    bbox = result.shape.bbox
+    spans = {
+        "x": bbox.max_x - bbox.min_x,
+        "y": bbox.max_y - bbox.min_y,
+        "z": bbox.max_z - bbox.min_z,
+    }
+    assert spans[normal_axis] == pytest.approx(5, rel=0.01)
+
+
+def test_extrude_both_straddles_a_non_xy_sketch(backend):
+    from opencad.kernel.core.models import Success
+    from opencad.kernel.operations.schemas import CreateSketchInput, ExtrudeInput
+
+    sketch = backend.create_sketch(
+        CreateSketchInput(plane="XZ", segments=_rect_segments(20, 10))
+    )
+    assert isinstance(sketch, Success) and sketch.shape_id
+
+    result = backend.extrude(
+        ExtrudeInput(sketch_id=sketch.shape_id, distance=5, both=True)
+    )
+
+    assert isinstance(result, Success)
+    assert result.shape is not None
+    assert result.shape.volume == pytest.approx(20 * 10 * 10, rel=0.01)
+    assert result.shape.bbox.min_y == pytest.approx(-5, abs=0.01)
+    assert result.shape.bbox.max_y == pytest.approx(5, abs=0.01)
+
+
 def test_tessellate_missing_shape(backend):
     with pytest.raises(ValueError, match="not found"):
         backend.tessellate("nonexistent")

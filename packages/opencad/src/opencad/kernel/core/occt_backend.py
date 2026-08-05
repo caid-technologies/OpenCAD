@@ -335,6 +335,21 @@ def _sketch_edge(
     return None
 
 
+# Sketch planes name the two axes they span, so the extrusion axis is the one
+# they leave out. Kept next to _sketch_edge so the plane mapping and its normal
+# cannot drift apart.
+_PLANE_NORMALS: dict[str, tuple[float, float, float]] = {
+    "XY": (0.0, 0.0, 1.0),
+    "XZ": (0.0, 1.0, 0.0),
+    "YZ": (1.0, 0.0, 0.0),
+}
+
+
+def _plane_normal(plane: str | None) -> tuple[float, float, float]:
+    """Unit normal of a sketch plane. Unknown names fall back to XY."""
+    return _PLANE_NORMALS.get(str(plane or "XY").upper(), _PLANE_NORMALS["XY"])
+
+
 # ── Topology reference helpers ──────────────────────────────────────
 
 
@@ -1406,9 +1421,16 @@ class OcctBackend:
                 face = TopoDS.Face_s(native)
             else:
                 face = BRepBuilderAPI_MakeFace(native).Face()
-            vec = gp_Vec(0, 0, payload.distance)
+            # Raise along the sketch plane's normal. Extruding a non-XY sketch
+            # along Z would sweep the profile within its own plane and produce a
+            # zero-volume shape that still looks like a success.
+            dx, dy, dz = (
+                component * payload.distance
+                for component in _plane_normal(meta.parameters.get("plane"))
+            )
+            vec = gp_Vec(dx, dy, dz)
             if payload.both:
-                vec_neg = gp_Vec(0, 0, -payload.distance)
+                vec_neg = gp_Vec(-dx, -dy, -dz)
                 prism_mod = importlib.import_module("OCP.BRepPrimAPI")
                 solid_pos = prism_mod.BRepPrimAPI_MakePrism(face, vec).Shape()
                 solid_neg = prism_mod.BRepPrimAPI_MakePrism(face, vec_neg).Shape()
