@@ -10,12 +10,15 @@ uv sync --all-packages --all-extras --group test
 pnpm install
 ```
 
+Omitting `--all-extras` leaves the OCCT B-rep backend uninstalled, and the
+kernel then falls back to the analytic backend, which cannot export STEP.
+
 To work on a single Python package with only its own dependencies present:
 
 ```bash
-uv sync --package opencad --group test          # core alone, no web stack
-uv sync --package opencad-agent --group test    # core + agent
-uv sync --package opencad-backend --group test  # everything
+uv sync --package opencad --extra occt --group test          # core alone, no web stack
+uv sync --package opencad-agent --group test                 # core + agent
+uv sync --package opencad-backend --extra occt --group test  # everything
 ```
 
 ## Verification

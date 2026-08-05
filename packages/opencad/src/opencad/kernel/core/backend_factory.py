@@ -40,7 +40,7 @@ def create_backend(
         if require_native:
             raise BackendUnavailableError(
                 "The analytic backend cannot export a real STEP or STL file. "
-                "Use --backend occt and install it with: uv sync --extra occt"
+                "Use --backend occt and install it with: uv sync --extra occt --group test"
             )
         return AnalyticBackend(id_strategy=id_strategy)
 
@@ -50,7 +50,7 @@ def create_backend(
         if name == "occt" or require_native:
             raise BackendUnavailableError(
                 "The OCCT backend is required but CadQuery/OCP is not installed. "
-                "Install it with: uv sync --extra occt"
+                "Install it with: uv sync --extra occt --group test"
             ) from exc
     else:
         if HAS_OCCT:
@@ -59,7 +59,7 @@ def create_backend(
     if name == "occt" or require_native:
         raise BackendUnavailableError(
             "The OCCT backend is required but CadQuery/OCP is not installed. "
-            "Install it with: uv sync --extra occt"
+            "Install it with: uv sync --extra occt --group test"
         )
 
     return AnalyticBackend(id_strategy=id_strategy)
