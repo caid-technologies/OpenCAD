@@ -13,7 +13,7 @@ def _add_backend_argument(parser: argparse.ArgumentParser) -> None:
         "--backend",
         default="auto",
         choices=["auto", "occt", "analytic"],
-        help="Geometry backend (auto prefers OCCT; STEP export requires OCCT)",
+        help="Geometry backend (auto prefers OCCT; STEP/STL export requires OCCT)",
     )
 
 
@@ -36,7 +36,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     run_parser = subparsers.add_parser("run", help="Run a Python script with the opencad fluent API")
     run_parser.add_argument("script", help="Python script path")
-    run_parser.add_argument("--export", help="Optional STEP output path")
+    run_parser.add_argument("--export", help="Optional STEP, STP, or STL output path")
     run_parser.add_argument("--tree-output", help="Optional path to write resulting feature tree JSON")
     run_parser.add_argument(
         "--id-strategy",
@@ -67,6 +67,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
+    export_format = _export_format(args.export) if args.export else None
     backend = create_backend(
         args.backend,
         id_strategy=args.id_strategy,
@@ -84,9 +85,12 @@ def _cmd_run(args: argparse.Namespace) -> int:
     current = get_default_context()
     if args.export:
         if not current.last_shape_id:
-            raise RuntimeError("No shape was produced by the script, cannot export STEP.")
-        current.export_step(current.last_shape_id, args.export)
-        print(f"Exported STEP to {args.export}")
+            raise RuntimeError(f"No shape was produced by the script, cannot export {export_format.upper()}.")
+        if export_format == "stl":
+            current.export_stl(current.last_shape_id, args.export)
+        else:
+            current.export_step(current.last_shape_id, args.export)
+        print(f"Exported {export_format.upper()} to {args.export}")
 
     if args.tree_output:
         current.save_tree_json(args.tree_output)
@@ -94,6 +98,15 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
     print(f"Script completed. Nodes: {len(current.tree.nodes)}")
     return 0
+
+
+def _export_format(filepath: str) -> str:
+    suffix = Path(filepath).suffix.lower()
+    if suffix in {".step", ".stp"}:
+        return "step"
+    if suffix == ".stl":
+        return "stl"
+    raise ValueError("Unsupported export format. Use a .step, .stp, or .stl destination.")
 
 
 def main(argv: list[str] | None = None) -> int:

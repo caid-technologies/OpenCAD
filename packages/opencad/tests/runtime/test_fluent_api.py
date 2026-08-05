@@ -42,6 +42,22 @@ def test_fluent_boolean_chain_records_dependencies() -> None:
     assert len(node.depends_on) == 2
 
 
+def test_fluent_part_exports_stl_by_extension(tmp_path: Path) -> None:
+    reset_default_context()
+    output = tmp_path / "box.stl"
+
+    Part().box(4, 3, 2).export(str(output))
+
+    assert output.read_text(encoding="utf-8").startswith("solid opencad")
+
+
+def test_fluent_part_rejects_unknown_export_extension(tmp_path: Path) -> None:
+    reset_default_context()
+
+    with pytest.raises(ValueError, match=".step, .stp, or .stl"):
+        Part().box(1, 1, 1).export(str(tmp_path / "box.obj"))
+
+
 def test_fluent_sketch_writes_profile_order_metadata() -> None:
     reset_default_context()
     sketch = Sketch(name="Ordered").rect(4, 3).circle(1.0, center=(2.0, 1.5), subtract=True)
