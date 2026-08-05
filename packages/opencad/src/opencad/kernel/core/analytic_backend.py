@@ -468,7 +468,7 @@ class AnalyticBackend:
         return make_failure(
             code=ErrorCode.UNSUPPORTED_STEP,
             message="The analytic backend cannot export STEP geometry.",
-            suggestion="Use the OCCT backend and install it with: uv sync --extra occt",
+            suggestion="Use the OCCT backend and install it with: uv sync --extra occt --group test",
             failed_check="native_geometry_backend",
         )
 

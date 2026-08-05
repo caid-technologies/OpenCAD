@@ -1,7 +1,7 @@
 """OCCT geometry backend powered by CadQuery / OCP.
 
 Implements :class:`KernelBackend` with real B-rep geometry via
-OpenCASCADE Technology. Install with ``uv sync --extra occt``.
+OpenCASCADE Technology. Install with ``uv sync --extra occt --group test``.
 
 """
 
@@ -199,7 +199,7 @@ def _require_occt() -> None:
     if not HAS_OCCT:
         raise RuntimeError(
             "CadQuery / OCP is required for the OCCT backend.  "
-            "Install with: uv sync --extra occt"
+            "Install with: uv sync --extra occt --group test"
         )
 
 

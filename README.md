@@ -112,12 +112,16 @@ uv sync --all-packages --all-extras --group test
 cp .env.example .env
 ```
 
+Keep `--all-extras`. The OCCT B-rep backend ships behind the `occt` extra, and
+without it the kernel falls back to the analytic backend, which cannot export
+STEP.
+
 To work on one package in isolation, sync only its dependencies:
 
 ```bash
-uv sync --package opencad --group test          # core alone, no web stack
-uv sync --package opencad-agent --group test    # core + agent
-uv sync --package opencad-backend --group test  # everything
+uv sync --package opencad --extra occt --group test          # core alone, no web stack
+uv sync --package opencad-agent --group test                 # core + agent
+uv sync --package opencad-backend --extra occt --group test  # everything
 ```
 
 ### 2. Start backend services
@@ -242,15 +246,19 @@ See `SECURITY.md` for coordinated vulnerability reporting.
 Run the whole workspace:
 
 ```bash
-uv sync --all-packages --group test
+uv sync --all-packages --all-extras --group test
 uv run --no-sync python -m pytest
 ```
+
+Without `--all-extras` the OCCT backend is absent, and the tests that need real
+B-rep geometry skip rather than fail — so the suite still reports green while
+leaving the native kernel untested.
 
 Or test one package with only its own dependencies installed — this is what CI
 does, and it is what keeps the core independent of the backend:
 
 ```bash
-uv sync --package opencad --group test
+uv sync --package opencad --extra occt --group test
 cd packages/opencad && uv run --no-sync --package opencad --project ../.. python -m pytest
 ```
 
