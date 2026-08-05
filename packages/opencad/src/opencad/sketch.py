@@ -62,6 +62,34 @@ class Sketch:
         self.line(p4, p1)
         return self
 
+    def arc(
+        self,
+        start: tuple[float, float],
+        end: tuple[float, float],
+        *,
+        center: tuple[float, float],
+        radius: float,
+    ) -> Self:
+        """Add the counter-clockwise arc from *start* to *end* about *center*.
+
+        Swapping the endpoints gives the clockwise arc, which is also how to ask
+        for the major arc between the same two points.
+        """
+        entity_id = self._new_entity_id("arc")
+        self._segments.append(
+            SketchSegment(type="arc", start=start, end=end, center=center, radius=radius)
+        )
+        self._entities[entity_id] = {
+            "id": entity_id,
+            "type": "arc",
+            "start": start,
+            "end": end,
+            "center": center,
+            "radius": radius,
+        }
+        self._profile_order.append(entity_id)
+        return self
+
     def circle(
         self,
         radius: float,
