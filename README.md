@@ -2,6 +2,13 @@
 
 A modular CAD system for parametric, programmable, and AI-assisted design
 
+[![opencad](https://img.shields.io/pypi/v/opencad?label=opencad)](https://pypi.org/project/opencad/)
+[![opencad-agent](https://img.shields.io/pypi/v/opencad-agent?label=opencad-agent)](https://pypi.org/project/opencad-agent/)
+[![opencad-backend](https://img.shields.io/pypi/v/opencad-backend?label=opencad-backend)](https://pypi.org/project/opencad-backend/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://pypi.org/project/opencad/)
+[![opencad-viewport](https://img.shields.io/npm/v/opencad-viewport?label=opencad-viewport&logo=npm)](https://www.npmjs.com/package/opencad-viewport)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 ## Install for Claude or Codex
 
 Install the OpenCAD skill with one command:
@@ -66,13 +73,37 @@ the backend fails the build.
 
 ### 1. Install
 
-For a packaged install, pick the layer you need — each is independent:
+Published on PyPI. Pick the layer you need — each installs independently, and
+each pulls the ones below it:
 
 ```bash
-uv pip install "opencad[occt]"        # core only: kernel, solver, tree, fluent API
-uv pip install "opencad-agent[llm]"   # + natural-language modelling
-uv pip install opencad-backend        # + the FastAPI HTTP service
+pip install opencad                   # core: kernel, solver, tree, fluent API, CLI
+pip install "opencad[occt]"           #   + OCCT B-rep backend (real STEP/STL)
+pip install "opencad-agent[llm]"      #   + natural-language modelling
+pip install opencad-backend           #   + the FastAPI HTTP service
 ```
+
+Installing `opencad` alone gets you a working kernel with **no web framework in
+the environment** — no FastAPI, no httpx. That is the point of the split:
+
+```python
+from opencad import Part, Sketch
+
+plate = Part().extrude(Sketch().rect(80, 30), depth=4)
+plate.fillet(edges="all", radius=1.0)
+```
+
+Cross-package versions move in lockstep and are pinned exactly, so
+`opencad-agent 0.2.0` can only resolve against `opencad 0.2.0`.
+
+The React components ship separately on npm:
+
+```bash
+npm install opencad-viewport react react-dom three @react-three/fiber @react-three/drei
+```
+
+React, Three.js, and the react-three packages are peer dependencies — they are
+singleton-sensitive, so the library never bundles them.
 
 For local development from this repository:
 

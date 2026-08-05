@@ -1,17 +1,30 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "opencad-agent"
-version = "0.2.0"
+version = "0.2.1"
 description = "OpenCAD AI agent — natural-language modelling on top of the OpenCAD core"
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Manufacturing",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Multimedia :: Graphics :: 3D Modeling",
+]
 # Depends on the core distribution and nothing web-facing.
 dependencies = [
-  "opencad==0.2.0",
+  "opencad==0.2.1",
   "pydantic>=2",
 ]
 
