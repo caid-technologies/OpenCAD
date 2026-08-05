@@ -42,6 +42,17 @@ HAS_OCCT = (
             ["create_cylinder", "create_cylinder", "boolean_cut"],
             id="full-device-cable-grommet",
         ),
+        pytest.param(
+            "round_spray_bottle.py",
+            [
+                "create_sketch", "extrude",
+                "create_sketch", "extrude", "boolean_union",
+                "create_sketch", "extrude", "boolean_union",
+                "create_sketch", "extrude", "boolean_union",
+                "create_sketch", "extrude", "boolean_union",
+            ],
+            id="round-spray-bottle",
+        ),
     ],
 )
 def test_examples_run_export_and_tree(

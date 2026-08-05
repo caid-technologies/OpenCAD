@@ -30,8 +30,8 @@ def create_backend(
     """Create a geometry backend for an application entry point.
 
     ``auto`` prefers OCCT and falls back to the analytic backend only when
-    native geometry is not required.  ``require_native`` is intended for STEP
-    and other exchange-file workflows where analytic metadata is insufficient.
+    native geometry is not required. ``require_native`` is intended for CAD
+    exchange-file workflows where analytic metadata is insufficient.
     """
     if name not in {"analytic", "auto", "occt"}:
         raise ValueError(f"Unknown geometry backend: {name}")
@@ -39,7 +39,7 @@ def create_backend(
     if name == "analytic":
         if require_native:
             raise BackendUnavailableError(
-                "The analytic backend cannot export a real STEP file. "
+                "The analytic backend cannot export a real STEP or STL file. "
                 "Use --backend occt and install it with: uv sync --extra occt"
             )
         return AnalyticBackend(id_strategy=id_strategy)
