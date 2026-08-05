@@ -1,0 +1,29 @@
+{
+  "name": "opencad",
+  "version": "0.1.0",
+  "description": "Generate validated STEP and STL models from natural-language requirements.",
+  "author": {
+    "name": "CAID Technologies",
+    "url": "https://github.com/caid-technologies"
+  },
+  "homepage": "https://github.com/caid-technologies/OpenCAD",
+  "repository": "https://github.com/caid-technologies/OpenCAD",
+  "license": "Apache-2.0",
+  "keywords": ["cad", "step", "stl", "3d-modeling", "manufacturing"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "OpenCAD",
+    "shortDescription": "Generate validated STEP and STL from text.",
+    "longDescription": "OpenCAD turns dimensional part descriptions into editable Python models and validated STEP or STL artifacts.",
+    "developerName": "CAID Technologies",
+    "category": "Productivity",
+    "capabilities": ["Write", "Interactive"],
+    "websiteURL": "https://github.com/caid-technologies/OpenCAD",
+    "defaultPrompt": [
+      "Create a dimensioned CAD part and export STEP and STL.",
+      "Turn this mechanical sketch into an editable STEP model.",
+      "Revise my OpenCAD model and validate the result."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

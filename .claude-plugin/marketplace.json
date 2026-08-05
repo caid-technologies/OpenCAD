@@ -1,0 +1,30 @@
+{
+  "name": "opencad",
+  "owner": {
+    "name": "CAID Technologies"
+  },
+  "interface": {
+    "displayName": "OpenCAD"
+  },
+  "metadata": {
+    "description": "Natural-language CAD generation for Claude and Codex."
+  },
+  "description": "Natural-language CAD generation for Claude and Codex.",
+  "version": "0.1.0",
+  "plugins": [
+    {
+      "name": "opencad",
+      "source": "./",
+      "description": "Generate validated STEP and STL models from text.",
+      "version": "0.1.0",
+      "author": {
+        "name": "CAID Technologies"
+      },
+      "homepage": "https://github.com/caid-technologies/OpenCAD",
+      "repository": "https://github.com/caid-technologies/OpenCAD",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "tags": ["cad", "step", "stl", "manufacturing"]
+    }
+  ]
+}
