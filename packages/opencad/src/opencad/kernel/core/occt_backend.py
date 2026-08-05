@@ -298,6 +298,28 @@ def _wire_by_index(shape: Any, index: int) -> Any:
     raise IndexError(f"Wire index {index} out of range (shape has {i} wires)")
 
 
+def _arc_midpoint(
+    start: tuple[float, float],
+    end: tuple[float, float],
+    center: tuple[float, float],
+    radius: float,
+) -> tuple[float, float]:
+    """Point halfway along the counter-clockwise arc from *start* to *end*.
+
+    GC_MakeArcOfCircle is a three-point constructor, so it needs a point that
+    actually lies between the endpoints. Sweeping counter-clockwise matches the
+    convention used for arcs elsewhere in CAD interchange (DXF, SVG's sweep
+    flag), and a clockwise arc is expressed by swapping the endpoints.
+    """
+    cx, cy = center
+    start_angle = math.atan2(start[1] - cy, start[0] - cx)
+    end_angle = math.atan2(end[1] - cy, end[0] - cx)
+    if end_angle <= start_angle:
+        end_angle += 2.0 * math.pi
+    mid_angle = start_angle + (end_angle - start_angle) / 2.0
+    return (cx + radius * math.cos(mid_angle), cy + radius * math.sin(mid_angle))
+
+
 def _sketch_edge(
     segment: SketchSegment,
     *,
@@ -335,9 +357,12 @@ def _sketch_edge(
         and segment.center
         and segment.radius
     ):
-        cx, cy = segment.center
-        midpoint = point((cx, cy + segment.radius))
-        arc = GC_MakeArcOfCircle(point(segment.start), midpoint, point(segment.end)).Value()
+        midpoint = _arc_midpoint(
+            segment.start, segment.end, segment.center, segment.radius
+        )
+        arc = GC_MakeArcOfCircle(
+            point(segment.start), point(midpoint), point(segment.end)
+        ).Value()
         return BRepBuilderAPI_MakeEdge(arc).Edge()
 
     return None

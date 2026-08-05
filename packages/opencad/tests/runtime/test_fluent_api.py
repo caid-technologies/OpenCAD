@@ -160,3 +160,55 @@ def test_fluent_revolve_builds_a_real_annulus() -> None:
         assert cq.Shape(native).Volume() == pytest.approx(expected, rel=0.001)
     finally:
         reset_default_context()
+
+
+# ── Sketch arcs ─────────────────────────────────────────────────────
+
+
+def test_fluent_sketch_records_an_arc_entity() -> None:
+    reset_default_context()
+    sketch = (
+        Sketch(name="Half disc")
+        .line((-10.0, 0.0), (10.0, 0.0))
+        .arc((10.0, 0.0), (-10.0, 0.0), center=(0.0, 0.0), radius=10.0)
+    )
+    Part().extrude(sketch, depth=5)
+
+    ctx = get_default_context()
+    assert sketch.feature_id is not None
+    entities = ctx.tree.nodes[sketch.feature_id].parameters.get("entities", {})
+
+    arcs = [entity for entity in entities.values() if entity.get("type") == "arc"]
+    assert len(arcs) == 1
+    assert arcs[0]["center"] == (0.0, 0.0)
+    assert arcs[0]["radius"] == 10.0
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("OCP") is None, reason="CadQuery/OCP not installed"
+)
+def test_fluent_arc_closes_a_half_disc_profile() -> None:
+    """A diameter plus its arc is the smallest closed profile that needs an arc,
+    so the extruded volume pins down that the arc bows the right way."""
+    import cadquery as cq
+
+    from opencad.kernel.core.backend_factory import create_backend
+    from opencad.runtime import RuntimeContext, set_default_context
+
+    ctx = RuntimeContext(backend=create_backend("occt", require_native=True))
+    set_default_context(ctx)
+    try:
+        radius, depth = 10.0, 5.0
+        sketch = (
+            Sketch(name="Half disc")
+            .line((-radius, 0.0), (radius, 0.0))
+            .arc((radius, 0.0), (-radius, 0.0), center=(0.0, 0.0), radius=radius)
+        )
+        part = Part().extrude(sketch, depth=depth)
+
+        assert part.shape_id is not None
+        native = ctx.registry.kernel.get_native_shape(part.shape_id)
+        expected = math.pi * radius**2 / 2.0 * depth
+        assert cq.Shape(native).Volume() == pytest.approx(expected, rel=0.001)
+    finally:
+        reset_default_context()
