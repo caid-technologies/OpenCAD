@@ -14,6 +14,12 @@ from opencad.design_artifact import (
 from opencad.part import Part
 from opencad.runtime import RuntimeContext, get_default_context, reset_default_context, set_default_context
 from opencad.sketch import Sketch
+from opencad.turntable import (
+    TurntableDependencyError,
+    TurntableOptions,
+    export_turntable,
+    render_turntable_frames,
+)
 from opencad.version import __version__
 
 __all__ = [
@@ -35,4 +41,8 @@ __all__ = [
     "load_design_artifact",
     "validate_design_artifact_payload",
     "validate_design_patch_payload",
+    "TurntableOptions",
+    "TurntableDependencyError",
+    "export_turntable",
+    "render_turntable_frames",
 ]

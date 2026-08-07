@@ -30,16 +30,32 @@ solver = [
 graph = [
   "networkx>=3",
 ]
+# Turntable preview export. `render` covers the primary GIF path and stays
+# pure Python; `video` adds MP4 and its bundled ffmpeg binary, so the common
+# case does not pay for a codec it will not use.
+render = [
+  "pillow>=10",
+]
+video = [
+  "pillow>=10",
+  "imageio-ffmpeg>=0.5",
+]
 full = [
   "cadquery>=2.4",
   "cadquery-ocp>=7.7",
   "scipy>=1.12",
   "networkx>=3",
+  "pillow>=10",
+  "imageio-ffmpeg>=0.5",
 ]
 
 [dependency-groups]
+# Both turntable encoders are in the test group so CI exercises the GIF and
+# MP4 paths for real; the package itself keeps them optional.
 test = [
   "pytest>=8",
+  "pillow>=10",
+  "imageio-ffmpeg>=0.5",
 ]
 
 [tool.setuptools.packages.find]

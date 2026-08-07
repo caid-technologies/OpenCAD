@@ -272,6 +272,41 @@ automatically whenever `--export` is requested. The analytic backend can be
 selected explicitly for tree-only validation with `--backend analytic`, but it
 does not produce user-deliverable CAD files.
 
+### Turntable preview
+
+`--turntable` renders the model rotating a full 360° about the vertical axis
+and writes it as an animated GIF, or an MP4 when asked. It runs headless — no
+browser, no display server, no GPU — so it works anywhere the CLI does.
+
+```bash
+opencad run model.py --export part.step --turntable part.gif
+opencad run model.py --turntable part.mp4 --turntable-frames 90
+```
+
+The format follows the file extension unless `--turntable-format` overrides it.
+`--turntable-frames` (default 60), `--turntable-fps` (25), `--turntable-size`
+(640x480), and `--turntable-deflection` (0.1) tune the output; frame size is
+rounded up to even dimensions because H.264 requires it.
+
+GIF needs only Pillow (`uv sync --extra render`). MP4 additionally needs a
+bundled ffmpeg (`uv sync --extra video`) and reports which extra to install if
+it is missing. Like `--export`, a turntable requires the OCCT backend, since
+the analytic backend cannot tessellate.
+
+The same thing is available in-process, for callers that should not shell out:
+
+```python
+from opencad import Part, TurntableOptions, get_default_context
+
+Part().box(30, 12, 5)
+context = get_default_context()
+context.export_turntable(
+    context.last_shape_id,
+    "part.gif",
+    options=TurntableOptions(frames=90, width=800, height=600),
+)
+```
+
 ## Claude and Codex skill
 
 The installable `create-cad-files` skill lives under `skills/create-cad-files`.
