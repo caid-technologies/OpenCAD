@@ -5,7 +5,17 @@ import runpy
 from pathlib import Path
 
 from opencad.runtime import RuntimeContext, get_default_context, set_default_context
-from opencad.kernel.core.backend_factory import create_backend
+from opencad.kernel.core.backend_factory import BackendUnavailableError, create_backend
+from opencad.turntable import (
+    DEFAULT_DEFLECTION,
+    DEFAULT_FPS,
+    DEFAULT_FRAMES,
+    DEFAULT_HEIGHT,
+    DEFAULT_WIDTH,
+    SUPPORTED_FORMATS,
+    TurntableOptions,
+    resolve_format,
+)
 
 
 def _add_backend_argument(parser: argparse.ArgumentParser) -> None:
@@ -44,10 +54,64 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=["readable", "uuid"],
         help="Shape ID strategy for script execution",
     )
+    _add_turntable_arguments(run_parser)
     _add_backend_argument(run_parser)
     run_parser.set_defaults(func=_cmd_run)
 
     return parser
+
+
+def _add_turntable_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--turntable",
+        help="Optional rotating preview output path (.gif or .mp4); requires the OCCT backend",
+    )
+    parser.add_argument(
+        "--turntable-format",
+        choices=list(SUPPORTED_FORMATS),
+        help="Override the turntable format inferred from the output extension",
+    )
+    parser.add_argument(
+        "--turntable-frames",
+        type=int,
+        default=DEFAULT_FRAMES,
+        help=f"Frames in one full revolution (default: {DEFAULT_FRAMES})",
+    )
+    parser.add_argument(
+        "--turntable-fps",
+        type=int,
+        default=DEFAULT_FPS,
+        help=f"Playback rate in frames per second (default: {DEFAULT_FPS})",
+    )
+    parser.add_argument(
+        "--turntable-size",
+        default=f"{DEFAULT_WIDTH}x{DEFAULT_HEIGHT}",
+        help=f"Frame size as WIDTHxHEIGHT (default: {DEFAULT_WIDTH}x{DEFAULT_HEIGHT})",
+    )
+    parser.add_argument(
+        "--turntable-deflection",
+        type=float,
+        default=DEFAULT_DEFLECTION,
+        help=f"Tessellation tolerance; lower is finer (default: {DEFAULT_DEFLECTION})",
+    )
+
+
+def _parse_size(value: str) -> tuple[int, int]:
+    width, separator, height = value.lower().partition("x")
+    if not separator or not width.strip().isdigit() or not height.strip().isdigit():
+        raise ValueError(f"Invalid --turntable-size '{value}'. Use WIDTHxHEIGHT, for example 640x480.")
+    return int(width), int(height)
+
+
+def _turntable_options(args: argparse.Namespace) -> TurntableOptions:
+    width, height = _parse_size(args.turntable_size)
+    return TurntableOptions(
+        frames=args.turntable_frames,
+        fps=args.turntable_fps,
+        width=width,
+        height=height,
+        deflection=args.turntable_deflection,
+    )
 
 
 def _cmd_build(args: argparse.Namespace) -> int:
@@ -68,10 +132,21 @@ def _cmd_build(args: argparse.Namespace) -> int:
 
 def _cmd_run(args: argparse.Namespace) -> int:
     export_format = _export_format(args.export) if args.export else None
+
+    # Resolve turntable settings before running the script so a bad extension
+    # or size is reported immediately rather than after the model is built.
+    turntable_format = resolve_format(args.turntable, args.turntable_format) if args.turntable else None
+    turntable_options = _turntable_options(args) if args.turntable else None
+    if args.turntable and args.backend == "analytic":
+        raise BackendUnavailableError(
+            "The analytic backend cannot tessellate geometry, so it cannot render a turntable. "
+            "Use --backend occt and install it with: uv sync --extra occt"
+        )
+
     backend = create_backend(
         args.backend,
         id_strategy=args.id_strategy,
-        require_native=bool(args.export),
+        require_native=bool(args.export) or bool(args.turntable),
     )
     context = RuntimeContext(id_strategy=args.id_strategy, backend=backend)
     set_default_context(context)
@@ -91,6 +166,17 @@ def _cmd_run(args: argparse.Namespace) -> int:
         else:
             current.export_step(current.last_shape_id, args.export)
         print(f"Exported {export_format.upper()} to {args.export}")
+
+    if args.turntable:
+        if not current.last_shape_id:
+            raise RuntimeError("No shape was produced by the script, cannot render a turntable.")
+        current.export_turntable(
+            current.last_shape_id,
+            args.turntable,
+            fmt=turntable_format,
+            options=turntable_options,
+        )
+        print(f"Rendered {turntable_format.upper()} turntable to {args.turntable}")
 
     if args.tree_output:
         current.save_tree_json(args.tree_output)

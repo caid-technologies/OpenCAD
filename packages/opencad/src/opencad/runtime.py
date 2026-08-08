@@ -16,6 +16,7 @@ from opencad.tree.service import FeatureTreeService
 
 if TYPE_CHECKING:
     from opencad.design_artifact import DesignArtifact
+    from opencad.turntable import TurntableOptions
 
 
 class RuntimeContext:
@@ -170,6 +171,27 @@ class RuntimeContext:
         response = registry_result_to_dict(self.registry, "export_stl", {"shape_id": shape_id, "filepath": filepath})
         if not response.get("ok"):
             raise RuntimeError(f"Export failed: {response.get('message', 'unknown error')}")
+
+    def export_turntable(
+        self,
+        shape_id: str,
+        filepath: str,
+        *,
+        fmt: str | None = None,
+        options: TurntableOptions | None = None,
+    ) -> Path:
+        """Render a shape as a rotating GIF (or MP4) preview.
+
+        Tessellation happens once here and the same mesh is reused for every
+        frame — only the camera moves, so re-tessellating per frame would make
+        export time scale with frame count for no visual gain.
+        """
+        from opencad.turntable import TurntableOptions as _Options
+        from opencad.turntable import export_turntable
+
+        settings = options or _Options()
+        mesh = self.kernel.tessellate(shape_id, settings.deflection)
+        return export_turntable(mesh, filepath, fmt=fmt, options=settings)
 
     def serialize_tree(self) -> str:
         return FeatureTreeService.serialize(self.tree)
