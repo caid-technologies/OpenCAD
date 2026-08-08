@@ -11,6 +11,7 @@ teams.
 - `software_hmi_panel.py` — front panel for a software-driven operator interface
 - `firmware_programmer_fixture.py` — fixture plate for firmware flashing or debug access
 - `full_device_cable_grommet.py` — cable-management part built from primitive booleans
+- `round_spray_bottle.py` — round-base bottle with an integrated trigger and nozzle
 - `simcorrect_forearm_design.py` — CAID design artifact for SimCorrect Problem 1
 
 ## Running an example
