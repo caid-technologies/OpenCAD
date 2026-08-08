@@ -25,7 +25,7 @@ from opencad.turntable import (
     render_turntable_frames,
     resolve_format,
 )
-from opencad.turntable.render import BACKGROUND_RGB, frame_azimuths
+from opencad.turntable.render import frame_azimuths
 
 HAS_OCCT = importlib.util.find_spec("cadquery") is not None and importlib.util.find_spec("OCP") is not None
 HAS_FFMPEG = importlib.util.find_spec("imageio_ffmpeg") is not None
@@ -90,9 +90,8 @@ def asymmetric_mesh() -> MeshData:
 
 
 def model_mask(frame: np.ndarray) -> np.ndarray:
-    """Pixels that differ from the background, i.e. covered by the model."""
-    difference = np.abs(frame.astype(np.int32) - np.asarray(BACKGROUND_RGB, dtype=np.int32))
-    return difference.sum(axis=2) > 12
+    """Pixels covered by the model."""
+    return frame[:, :, 3] > 12
 
 
 # ── Rotation geometry ────────────────────────────────────────────────
@@ -291,8 +290,20 @@ def test_rendered_frames_use_the_normalized_size() -> None:
         box_mesh(10, 10, 10), TurntableOptions(frames=2, width=65, height=49, supersample=1)
     )
 
-    assert frames[0].shape == (50, 66, 3)
+    assert frames[0].shape == (50, 66, 4)
     assert frames[0].dtype == np.uint8
+
+
+def test_rendered_frames_are_transparent_and_achromatic() -> None:
+    frame = render_turntable_frames(
+        box_mesh(10, 10, 10), TurntableOptions(frames=2, width=66, height=50, supersample=2)
+    )[0]
+
+    assert frame[:, :, 3].min() == 0
+    assert frame[:, :, 3].max() == 255
+    visible_rgb = frame[:, :, :3][frame[:, :, 3] > 0]
+    np.testing.assert_array_equal(visible_rgb[:, 0], visible_rgb[:, 1])
+    np.testing.assert_array_equal(visible_rgb[:, 1], visible_rgb[:, 2])
 
 
 # ── Encoding ─────────────────────────────────────────────────────────
@@ -315,6 +326,11 @@ def test_gif_export_writes_a_looping_animation(tmp_path: Path) -> None:
         assert animation.size == (96, 72)
         assert animation.info["loop"] == 0
         assert animation.info["duration"] == 40
+        assert "transparency" in animation.info
+        assert animation.disposal_method == 2
+        rgba = np.asarray(animation.convert("RGBA"))
+        assert rgba[:, :, 3].min() == 0
+        assert rgba[:, :, 3].max() == 255
 
 
 def test_default_frame_rate_round_trips_exactly_through_gif(tmp_path: Path) -> None:

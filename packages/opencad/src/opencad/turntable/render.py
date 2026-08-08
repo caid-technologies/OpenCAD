@@ -5,8 +5,9 @@ A small numpy z-buffer rasterizer. Deliberately dependency-free beyond
 plain containers — anything GPU-backed (OSMesa/EGL) would not.
 
 Conventions match the web viewport so exported previews look like what a user
-sees interactively: Z-up world, 45° vertical FOV, and the same base/background
-colors (``packages/opencad-viewport/src/components/Viewport3D.tsx``).
+sees interactively: Z-up world and a 45° vertical FOV. Preview frames use a
+neutral grayscale material over transparency so GIFs can be placed on any
+background without carrying a colored rectangle with them.
 """
 
 from __future__ import annotations
@@ -20,9 +21,8 @@ VIEWER_FOV_DEGREES = 45.0
 VIEWER_ELEVATION_DEGREES = math.degrees(math.atan2(30.0, math.hypot(45.0, 55.0)))
 VIEWER_AZIMUTH_DEGREES = math.degrees(math.atan2(-55.0, 45.0))
 
-# `<color attach="background" args={["#f5f7fb"]} />` and the mesh material color.
-BACKGROUND_RGB = (0xF5, 0xF7, 0xFB)
-MODEL_RGB = (0x9C, 0xA3, 0xAF)
+# The model is deliberately achromatic.
+MODEL_RGB = (0xA8, 0xA8, 0xA8)
 
 # The turntable axis is world Z, not Y — the scene is Z-up.
 UP_AXIS = np.array([0.0, 0.0, 1.0])
@@ -209,11 +209,10 @@ def render_frame(
     width: int,
     height: int,
     fov_degrees: float = VIEWER_FOV_DEGREES,
-    background: tuple[int, int, int] = BACKGROUND_RGB,
     model_color: tuple[int, int, int] = MODEL_RGB,
     supersample: int = 2,
 ) -> np.ndarray:
-    """Rasterize one frame and return it as an ``(height, width, 3)`` uint8 array.
+    """Rasterize one frame as an ``(height, width, 4)`` RGBA uint8 array.
 
     Rendered at ``supersample``× and box-filtered down, which matters more here
     than it would for organic geometry: CAD silhouettes are dominated by long
@@ -244,8 +243,11 @@ def render_frame(
     screen_x = (ndc_x * 0.5 + 0.5) * render_width
     screen_y = (1.0 - (ndc_y * 0.5 + 0.5)) * render_height
 
-    color_buffer = np.empty((render_height, render_width, 3), dtype=np.float64)
-    color_buffer[:] = np.asarray(background, dtype=np.float64)
+    # RGB is stored premultiplied while supersampling. Keeping a separate
+    # coverage channel avoids baking a pale matte into antialiased edge pixels,
+    # which would produce a halo when the GIF is shown on a dark background.
+    color_buffer = np.zeros((render_height, render_width, 3), dtype=np.float64)
+    alpha_buffer = np.zeros((render_height, render_width), dtype=np.float64)
     depth_buffer = np.full((render_height, render_width), np.inf)
 
     light = _LIGHT_VIEW_DIRECTION / np.linalg.norm(_LIGHT_VIEW_DIRECTION)
@@ -258,15 +260,23 @@ def render_frame(
         view_normal=view_normal,
         triangle=triangle,
         color_buffer=color_buffer,
+        alpha_buffer=alpha_buffer,
         depth_buffer=depth_buffer,
         light=light,
         base=base,
     )
 
-    frame = np.clip(color_buffer, 0.0, 255.0)
+    color = np.clip(color_buffer, 0.0, 255.0)
+    alpha = alpha_buffer
     if supersample > 1:
-        frame = frame.reshape(height, supersample, width, supersample, 3).mean(axis=(1, 3))
-    return frame.astype(np.uint8)
+        color = color.reshape(height, supersample, width, supersample, 3).mean(axis=(1, 3))
+        alpha = alpha.reshape(height, supersample, width, supersample).mean(axis=(1, 3))
+
+    # Undo the premultiplication for conventional straight-alpha RGBA. Fully
+    # transparent pixels stay black, though their RGB value is immaterial.
+    scale = np.divide(255.0, alpha, out=np.zeros_like(alpha), where=alpha > 0.0)
+    color *= scale[:, :, None]
+    return np.concatenate([color, alpha[:, :, None]], axis=2).astype(np.uint8)
 
 
 def _rasterize(
@@ -277,6 +287,7 @@ def _rasterize(
     view_normal: np.ndarray,
     triangle: np.ndarray,
     color_buffer: np.ndarray,
+    alpha_buffer: np.ndarray,
     depth_buffer: np.ndarray,
     light: np.ndarray,
     base: np.ndarray,
@@ -382,3 +393,5 @@ def _rasterize(
         depth_window[visible] = hit_depth
         color_window = color_buffer[lo_y : hi_y + 1, lo_x : hi_x + 1]
         color_window[visible] = intensity[:, None] * base
+        alpha_window = alpha_buffer[lo_y : hi_y + 1, lo_x : hi_x + 1]
+        alpha_window[visible] = 255.0

@@ -276,7 +276,13 @@ does not produce user-deliverable CAD files.
 
 `--turntable` renders the model rotating a full 360° about the vertical axis
 and writes it as an animated GIF, or an MP4 when asked. It runs headless — no
-browser, no display server, no GPU — so it works anywhere the CLI does.
+browser, no display server, no GPU — so it works anywhere the CLI does. GIFs
+use a transparent background and neutral grayscale model shading; MP4 output
+uses a light matte because the browser-compatible video stream has no alpha.
+
+![Transparent grayscale turntable of a drone STEP assembly](docs/assets/drone-assembly-turntable.gif)
+
+*A 2 MB drone STEP assembly rendered as a 60-frame transparent GIF.*
 
 ```bash
 opencad run model.py --export part.step --turntable part.gif

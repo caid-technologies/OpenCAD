@@ -22,6 +22,8 @@ _EXTENSIONS = {".gif": GIF, ".mp4": MP4}
 # revolution rather than trusting frame 0 catches surfaces that only come into
 # view partway through.
 _PALETTE_SAMPLES = 8
+_TRANSPARENT_INDEX = 255
+_VIDEO_MATTE_RGB = np.array((0xF5, 0xF7, 0xFB), dtype=np.float64)
 
 
 class TurntableDependencyError(RuntimeError):
@@ -73,18 +75,35 @@ def _write_gif(frames: list[np.ndarray], path: Path, fps: int) -> None:
             "GIF export requires Pillow. Install it with: uv sync --extra render"
         ) from exc
 
-    images = [Image.fromarray(frame, mode="RGB") for frame in frames]
+    rgba_frames = [_as_rgba(frame) for frame in frames]
+    images = [Image.fromarray(frame[:, :, :3], mode="RGB") for frame in rgba_frames]
 
     stride = max(1, len(frames) // _PALETTE_SAMPLES)
-    montage = np.concatenate(frames[::stride][:_PALETTE_SAMPLES], axis=0)
+    montage = np.concatenate(rgba_frames[::stride][:_PALETTE_SAMPLES], axis=0)[:, :, :3]
+    # Keep one palette entry out of the quantizer so it can mean transparent in
+    # every frame. A shared palette prevents the neutral shading from shifting
+    # as the model turns.
     palette = Image.fromarray(montage, mode="RGB").quantize(
-        colors=256, method=Image.Quantize.MEDIANCUT
+        colors=255, method=Image.Quantize.MEDIANCUT
     )
 
     # Dithering is deliberately off. Shaded CAD surfaces are near-monochrome, so
-    # a 256-entry adaptive palette resolves them without banding, while per-frame
+    # a 255-color adaptive palette resolves them without banding, while per-frame
     # dither noise would shimmer across the loop and inflate the file.
-    quantized = [image.quantize(palette=palette, dither=Image.Dither.NONE) for image in images]
+    quantized = []
+    for image, rgba in zip(images, rgba_frames):
+        indexed = np.asarray(
+            image.quantize(palette=palette, dither=Image.Dither.NONE), dtype=np.uint8
+        ).copy()
+        # GIF supports only binary transparency. A half-coverage cutoff gives
+        # the closest silhouette to the supersampled alpha edge without a matte
+        # halo. Index 255 is reserved exclusively for those transparent pixels.
+        opaque = rgba[:, :, 3] >= 128
+        indexed[opaque & (indexed == _TRANSPARENT_INDEX)] = _TRANSPARENT_INDEX - 1
+        indexed[~opaque] = _TRANSPARENT_INDEX
+        indexed_image = Image.fromarray(indexed, mode="P")
+        indexed_image.putpalette(palette.getpalette())
+        quantized.append(indexed_image)
 
     # GIF stores frame delay in centiseconds, so the delay is rounded to the
     # nearest 10ms here rather than left for Pillow to truncate — truncation
@@ -104,8 +123,31 @@ def _write_gif(frames: list[np.ndarray], path: Path, fps: int) -> None:
         duration=duration_ms,
         loop=0,
         optimize=False,
-        disposal=1,
+        transparency=_TRANSPARENT_INDEX,
+        # Restore transparency between frames. Leaving the previous frame in
+        # place would make a rotating model smear where its silhouette recedes.
+        disposal=2,
     )
+
+
+def _as_rgba(frame: np.ndarray) -> np.ndarray:
+    """Normalize RGB/RGBA input to RGBA while retaining encoder compatibility."""
+    if frame.ndim != 3 or frame.shape[2] not in (3, 4):
+        raise ValueError("Animation frames must be RGB or RGBA uint8 arrays.")
+    rgb = np.asarray(frame[:, :, :3], dtype=np.uint8)
+    if frame.shape[2] == 4:
+        alpha = np.asarray(frame[:, :, 3:4], dtype=np.uint8)
+    else:
+        alpha = np.full((*frame.shape[:2], 1), 255, dtype=np.uint8)
+    return np.concatenate([rgb, alpha], axis=2)
+
+
+def _as_video_rgb(frame: np.ndarray) -> np.ndarray:
+    """Composite an RGBA frame for video formats, which have no alpha here."""
+    rgba = _as_rgba(frame)
+    alpha = rgba[:, :, 3:4].astype(np.float64) / 255.0
+    rgb = rgba[:, :, :3].astype(np.float64) * alpha + _VIDEO_MATTE_RGB * (1.0 - alpha)
+    return np.clip(rgb, 0.0, 255.0).astype(np.uint8)
 
 
 def _write_mp4(frames: list[np.ndarray], path: Path, fps: int) -> None:
@@ -137,7 +179,7 @@ def _write_mp4(frames: list[np.ndarray], path: Path, fps: int) -> None:
     writer.send(None)
     try:
         for frame in frames:
-            writer.send(np.ascontiguousarray(frame).tobytes())
+            writer.send(np.ascontiguousarray(_as_video_rgb(frame)).tobytes())
     finally:
         writer.close()
 
