@@ -9,6 +9,12 @@ A modular CAD system for parametric, programmable, and AI-assisted design
 [![opencad-viewport](https://img.shields.io/npm/v/opencad-viewport?label=opencad-viewport&logo=npm)](https://www.npmjs.com/package/opencad-viewport)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
+<p align="center">
+  <img src="docs/assets/drone-assembly-turntable.gif" width="32%" alt="Drone assembly turntable" />
+  <img src="docs/assets/gyroscope.gif" width="32%" alt="Gyroscope model" />
+  <img src="docs/assets/drone-assembly-propellers.gif" width="32%" alt="Drone assembly propellers" />
+</p>
+
 ## Install for Claude or Codex
 
 Install the OpenCAD skill with one command:
