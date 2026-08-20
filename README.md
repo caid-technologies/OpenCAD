@@ -15,12 +15,24 @@ A modular CAD system for parametric, programmable, and AI-assisted design
   <img src="docs/assets/drone-assembly-propellers.gif" width="32%" alt="Drone assembly propellers" />
 </p>
 
-## Install for Claude or Codex
+## Install for Claude, Codex, OpenCode, OpenClaw, or NemoClaw
 
-Install the OpenCAD skill with one command:
+Install the OpenCAD skill for Claude, Codex, OpenCode, or OpenClaw with one
+command:
 
 ```bash
 npx skills add caid-technologies/OpenCAD
+```
+
+OpenClaw also discovers `skills/create-cad-files` directly when this repository
+is its workspace. OpenCode can discover the checked-in adapters under both
+`.opencode/skills` and `.agents/skills`.
+
+For a running NemoClaw sandbox, install the canonical skill from a checkout of
+this repository (replace `my-assistant` with the sandbox name):
+
+```bash
+nemoclaw my-assistant skill install ./skills/create-cad-files
 ```
 
 Then ask the agent normally:
@@ -100,7 +112,7 @@ plate.fillet(edges="all", radius=1.0)
 ```
 
 Cross-package versions move in lockstep and are pinned exactly, so
-`opencad-agent 0.2.0` can only resolve against `opencad 0.2.0`.
+`opencad-agent 0.2.3` can only resolve against `opencad 0.2.3`.
 
 The React components ship separately on npm:
 
@@ -358,13 +370,16 @@ context.export_turntable(
 )
 ```
 
-## Claude and Codex skill
+## Agent skill
 
 The installable `create-cad-files` skill lives under `skills/create-cad-files`.
-Small repository adapters under `.agents/skills` and `.claude/skills` make the
-same workflow available automatically while developing OpenCAD. It turns a
-dimensional request into an OpenCAD Python model, then atomically exports and
-validates STEP, STP, or STL.
+Small repository adapters under `.agents/skills`, `.claude/skills`, and
+`.opencode/skills` make the same workflow available automatically while
+developing OpenCAD. OpenClaw reads the canonical `skills/` directory directly,
+and NemoClaw can upload that directory with `nemoclaw <sandbox> skill install`.
+Every integration uses the same instructions, scripts, and references. The
+skill turns a dimensional request into an OpenCAD Python model, then atomically
+exports and validates STEP, STP, or STL.
 
 ## Examples
 
