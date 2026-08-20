@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.2.3 - 2026-08-20
+
+Published: `opencad`, `opencad-agent`, and `opencad-backend` on PyPI.
+
+### Agent compatibility
+
+- Added native OpenCode discovery through `.opencode/skills`.
+- Documented direct OpenClaw workspace discovery and NemoClaw sandbox
+  installation for the packaged `create-cad-files` skill.
+- Made skill discovery metadata portable across Claude Code, Codex, OpenCode,
+  OpenClaw, and NemoClaw while retaining one canonical workflow.
+
+### Modelling and export improvements since 0.2.1
+
+- Added fluent revolve, loft, sweep, and sketch-arc modelling operations.
+- Corrected extrusion along non-XY sketch plane normals and eliminated
+  duplicate topology edge identifiers.
+- Added headless turntable GIF and MP4 export with configurable rendering,
+  plus animated example renders.
+
+### Release engineering
+
+- Advanced all package metadata to 0.2.3 and kept Python dependency pins in
+  exact lockstep. Version 0.2.2 remains the existing GitHub-only release; the
+  Python indexes advance from 0.2.1 directly to 0.2.3.
+
 ## 0.2.1 - 2026-08-01
 
 ### Corrected license metadata

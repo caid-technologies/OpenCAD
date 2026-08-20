@@ -7,9 +7,9 @@
     "displayName": "OpenCAD"
   },
   "metadata": {
-    "description": "Natural-language CAD generation for Claude and Codex."
+    "description": "Natural-language CAD generation for AI coding agents."
   },
-  "description": "Natural-language CAD generation for Claude and Codex.",
+  "description": "Natural-language CAD generation for AI coding agents.",
   "version": "0.1.0",
   "plugins": [
     {

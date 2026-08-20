@@ -5,4 +5,4 @@ description: Create dimensioned 3D CAD parts from natural-language requirements 
 
 # Create CAD Files
 
-Read [the packaged skill instructions](../../../skills/create-cad-files/SKILL.md) completely and follow them. Resolve all referenced scripts and references from `skills/create-cad-files/`; this Claude adapter and the installable plugin intentionally share one implementation.
+Read [the packaged skill instructions](../../../skills/create-cad-files/SKILL.md) completely and follow them. Resolve all referenced scripts and references from `skills/create-cad-files/`; this OpenCode adapter and the installable skill intentionally share one implementation.
