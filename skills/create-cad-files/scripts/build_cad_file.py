@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import runpy
+import sys
 import tempfile
 from pathlib import Path
 
@@ -39,7 +40,15 @@ def _run_model(model_path: Path, output_path: Path, tree_path: Path | None) -> i
 
     context = RuntimeContext(backend=create_backend("occt", require_native=True))
     set_default_context(context)
-    runpy.run_path(str(model_path), run_name="__main__")
+    model_directory = str(model_path.parent)
+    added_model_directory = model_directory not in sys.path
+    if added_model_directory:
+        sys.path.insert(0, model_directory)
+    try:
+        runpy.run_path(str(model_path), run_name="__main__")
+    finally:
+        if added_model_directory:
+            sys.path.remove(model_directory)
     if not context.last_shape_id:
         raise RuntimeError("The model produced no shape to export.")
 

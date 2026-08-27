@@ -1,4 +1,4 @@
 interface:
   display_name: "Create CAD Files"
   short_description: "Create validated STEP and STL models"
-  default_prompt: "Use $create-cad-files to create a dimensioned CAD model and export it as STEP or STL."
+  default_prompt: "Use $create-cad-files to create a dimensioned CAD project in its own directory. Create README.md for context, assembly.py as the master composition entry point, nested components/ Python packages for parts and subcomponents, and validated STEP or STL artifacts under outputs/."

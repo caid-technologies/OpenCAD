@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import runpy
+import sys
 from pathlib import Path
 
 from opencad.runtime import RuntimeContext, get_default_context, set_default_context
@@ -155,7 +156,15 @@ def _cmd_run(args: argparse.Namespace) -> int:
     if not script_path.exists():
         raise FileNotFoundError(f"Script not found: {script_path}")
 
-    runpy.run_path(str(script_path), run_name="__main__")
+    script_directory = str(script_path.resolve().parent)
+    added_script_directory = script_directory not in sys.path
+    if added_script_directory:
+        sys.path.insert(0, script_directory)
+    try:
+        runpy.run_path(str(script_path), run_name="__main__")
+    finally:
+        if added_script_directory:
+            sys.path.remove(script_directory)
 
     current = get_default_context()
     if args.export:
