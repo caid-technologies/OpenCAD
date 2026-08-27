@@ -116,9 +116,22 @@ def test_cli_auto_step_export_requires_occt_install(tmp_path: Path) -> None:
 
 
 def test_cli_tree_only_run_supports_analytic_backend(tmp_path: Path) -> None:
+    components_dir = tmp_path / "components"
+    components_dir.mkdir()
+    (components_dir / "__init__.py").write_text("", encoding="utf-8")
+    (components_dir / "base.py").write_text(
+        "from opencad import Part\n\n"
+        "def make_base():\n"
+        "    return Part(name='Base').box(1, 1, 1)\n",
+        encoding="utf-8",
+    )
     script_path = tmp_path / "model.py"
     tree_path = tmp_path / "tree.json"
-    script_path.write_text("from opencad import Part\nPart().box(1, 1, 1)\n", encoding="utf-8")
+    script_path.write_text(
+        "from components.base import make_base\n"
+        "make_base()\n",
+        encoding="utf-8",
+    )
 
     code = main([
         "run",
