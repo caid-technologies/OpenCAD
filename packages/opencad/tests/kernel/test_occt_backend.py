@@ -35,7 +35,12 @@ def test_create_box(backend):
     assert isinstance(result, Success)
     assert result.shape is not None
     assert result.shape.volume == pytest.approx(150.0, rel=0.01)
-    assert result.shape.bbox.min_x < result.shape.bbox.max_x
+    assert result.shape.bbox.min_x == pytest.approx(-5.0, abs=0.01)
+    assert result.shape.bbox.min_y == pytest.approx(-2.5, abs=0.01)
+    assert result.shape.bbox.min_z == pytest.approx(-1.5, abs=0.01)
+    assert result.shape.bbox.max_x == pytest.approx(5.0, abs=0.01)
+    assert result.shape.bbox.max_y == pytest.approx(2.5, abs=0.01)
+    assert result.shape.bbox.max_z == pytest.approx(1.5, abs=0.01)
     assert len(result.shape.edge_ids) == 12  # A box has 12 edges
 
 

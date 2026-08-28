@@ -796,7 +796,7 @@ class OcctBackend:
         if payload.length <= self.tolerance or payload.width <= self.tolerance or payload.height <= self.tolerance:
             return self._invalid_input("Box dimensions must be greater than tolerance.")
 
-        wp = cq.Workplane("XY").box(payload.length, payload.width, payload.height, centered=False)
+        wp = cq.Workplane("XY").box(payload.length, payload.width, payload.height, centered=True)
         native = wp.val().wrapped
         shape = self._register_shape("box", native, payload.model_dump())
         return self._success(shape, "create_box")

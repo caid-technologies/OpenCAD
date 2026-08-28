@@ -55,7 +55,7 @@ class OpenCadAgentService:
                     f"Invalid code:\n{generated_code}\n\n"
                     "Fix the exact validation error before returning code. "
                     "Every boolean union, cut, or intersection must use solids whose bounding boxes overlap. "
-                    "Native primitives start at the world origin and OpenCAD has no translation method, so use overlapping dimensions at the origin. "
+                    "Boxes are centered at the world origin; use .translate((dx,dy,dz), name=...) to position a primitive or feature away from its default origin. "
                     "For a screw, use an overlapping narrow cylinder for the shank and a wider short cylinder for the head. "
                     "For every Sketch variable, keep exactly one closed-profile call: one rect or one circle. "
                     "Delete all extra closed-profile calls instead of replacing them. "

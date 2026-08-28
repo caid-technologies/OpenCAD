@@ -59,6 +59,7 @@ Part methods (all return self for chaining):
   .sphere(radius, *, name=str)
   .cone(radius1, radius2, height, *, name=str)
   .torus(major_radius, minor_radius, *, name=str)
+  .translate((dx,dy,dz), *, name=str)
   .extrude(sketch, *, depth, both=False, name=str)   # sketch is a Sketch instance, NO subtract arg
   .union(other_part, *, name=str)
   .cut(other_part, *, name=str)
@@ -130,7 +131,7 @@ def build_code_generation_prompt(tree_state: FeatureTree) -> str:
         "- Prefer `Sketch(name=...)`; if origin is supplied it must be a 3-number tuple, while rect origin and circle center use 2-number tuples.\n"
         "- Create each independent solid from its own Part instance; do not call an operation on a Part that has no shape.\n"
         "- Every union, cut, or intersection requires operands whose bounding boxes overlap. Never boolean disconnected solids.\n"
-        "- Native primitives begin at the world origin and there is no translation method; choose dimensions that overlap there.\n"
+        "- Boxes are centered at the world origin; use .translate((dx,dy,dz), name=...) to position a primitive or feature away from its default origin.\n"
         "- Use the native box, cylinder, sphere, cone, or torus Part method whenever that primitive is requested; do not approximate it with a sketch and extrusion.\n"
         "- A torus must use `Part(name=...).torus(major_radius=..., minor_radius=..., name=...)`.\n"
         "- For radial repetition, sketch one feature away from the axis, extrude it, then use circular_pattern and union it with the core.\n"

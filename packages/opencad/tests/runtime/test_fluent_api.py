@@ -44,6 +44,22 @@ def test_fluent_boolean_chain_records_dependencies() -> None:
     assert len(node.depends_on) == 2
 
 
+def test_fluent_box_is_centered_at_modeling_origin() -> None:
+    reset_default_context()
+    part = Part().box(10, 5, 3)
+
+    ctx = get_default_context()
+    assert part.shape_id is not None
+    box = ctx.kernel.store.get(part.shape_id)
+    assert box is not None
+    assert box.bbox.min_x == pytest.approx(-5.0)
+    assert box.bbox.min_y == pytest.approx(-2.5)
+    assert box.bbox.min_z == pytest.approx(-1.5)
+    assert box.bbox.max_x == pytest.approx(5.0)
+    assert box.bbox.max_y == pytest.approx(2.5)
+    assert box.bbox.max_z == pytest.approx(1.5)
+
+
 def test_fluent_translate_positions_shape_and_records_dependency() -> None:
     reset_default_context()
     part = Part().box(2, 3, 4).translate((10.0, -2.0, 5.0))
@@ -53,12 +69,12 @@ def test_fluent_translate_positions_shape_and_records_dependency() -> None:
     assert part.shape_id is not None
     translated = ctx.kernel.store.get(part.shape_id)
     assert translated is not None
-    assert translated.bbox.min_x == pytest.approx(10.0)
-    assert translated.bbox.min_y == pytest.approx(-2.0)
-    assert translated.bbox.min_z == pytest.approx(5.0)
-    assert translated.bbox.max_x == pytest.approx(12.0)
-    assert translated.bbox.max_y == pytest.approx(1.0)
-    assert translated.bbox.max_z == pytest.approx(9.0)
+    assert translated.bbox.min_x == pytest.approx(9.0)
+    assert translated.bbox.min_y == pytest.approx(-3.5)
+    assert translated.bbox.min_z == pytest.approx(3.0)
+    assert translated.bbox.max_x == pytest.approx(11.0)
+    assert translated.bbox.max_y == pytest.approx(-0.5)
+    assert translated.bbox.max_z == pytest.approx(7.0)
     node = ctx.tree.nodes[part.feature_id]
     assert node.operation == "translate"
     assert node.depends_on == ["feat-0001"]
@@ -69,9 +85,9 @@ def test_fluent_translate_positions_shape_and_records_dependency() -> None:
     assert rebuilt_node.shape_id is not None
     rebuilt = ctx.kernel.store.get(rebuilt_node.shape_id)
     assert rebuilt is not None
-    assert rebuilt.bbox.min_x == pytest.approx(10.0)
-    assert rebuilt.bbox.min_y == pytest.approx(-2.0)
-    assert rebuilt.bbox.min_z == pytest.approx(5.0)
+    assert rebuilt.bbox.min_x == pytest.approx(9.0)
+    assert rebuilt.bbox.min_y == pytest.approx(-3.5)
+    assert rebuilt.bbox.min_z == pytest.approx(3.0)
 
 
 def test_fluent_part_exports_stl_by_extension(tmp_path: Path) -> None:
@@ -104,12 +120,12 @@ def test_fluent_translate_moves_a_real_occt_shape() -> None:
         assert part.shape_id is not None
         translated = ctx.kernel.store.get(part.shape_id)
         assert translated is not None
-        assert translated.bbox.min_x == pytest.approx(10.0)
-        assert translated.bbox.min_y == pytest.approx(-2.0)
-        assert translated.bbox.min_z == pytest.approx(5.0)
-        assert translated.bbox.max_x == pytest.approx(12.0)
-        assert translated.bbox.max_y == pytest.approx(1.0)
-        assert translated.bbox.max_z == pytest.approx(9.0)
+        assert translated.bbox.min_x == pytest.approx(9.0)
+        assert translated.bbox.min_y == pytest.approx(-3.5)
+        assert translated.bbox.min_z == pytest.approx(3.0)
+        assert translated.bbox.max_x == pytest.approx(11.0)
+        assert translated.bbox.max_y == pytest.approx(-0.5)
+        assert translated.bbox.max_z == pytest.approx(7.0)
     finally:
         reset_default_context()
 

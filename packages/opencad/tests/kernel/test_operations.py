@@ -61,6 +61,12 @@ def test_create_box_success(kernel: OpenCadKernel) -> None:
     assert result.ok
     assert result.shape is not None
     assert result.shape.volume == pytest.approx(24.0)
+    assert result.shape.bbox.min_x == pytest.approx(-1.0)
+    assert result.shape.bbox.min_y == pytest.approx(-1.5)
+    assert result.shape.bbox.min_z == pytest.approx(-2.0)
+    assert result.shape.bbox.max_x == pytest.approx(1.0)
+    assert result.shape.bbox.max_y == pytest.approx(1.5)
+    assert result.shape.bbox.max_z == pytest.approx(2.0)
 
 
 def test_create_cylinder_success(kernel: OpenCadKernel) -> None:
@@ -87,12 +93,12 @@ def test_translate_moves_bbox_without_changing_volume(kernel: OpenCadKernel) -> 
     assert result.shape is not None
     assert result.shape.kind == "translate"
     assert result.shape.volume == pytest.approx(box.shape.volume)
-    assert result.shape.bbox.min_x == pytest.approx(10.0)
-    assert result.shape.bbox.min_y == pytest.approx(-2.0)
-    assert result.shape.bbox.min_z == pytest.approx(5.0)
-    assert result.shape.bbox.max_x == pytest.approx(12.0)
-    assert result.shape.bbox.max_y == pytest.approx(1.0)
-    assert result.shape.bbox.max_z == pytest.approx(9.0)
+    assert result.shape.bbox.min_x == pytest.approx(9.0)
+    assert result.shape.bbox.min_y == pytest.approx(-3.5)
+    assert result.shape.bbox.min_z == pytest.approx(3.0)
+    assert result.shape.bbox.max_x == pytest.approx(11.0)
+    assert result.shape.bbox.max_y == pytest.approx(-0.5)
+    assert result.shape.bbox.max_z == pytest.approx(7.0)
 
 
 def test_create_box_invalid_input(kernel: OpenCadKernel) -> None:
