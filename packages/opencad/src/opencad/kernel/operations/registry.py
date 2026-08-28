@@ -39,6 +39,7 @@ from opencad.kernel.operations.schemas import (
     RevolveInput,
     ShellInput,
     SweepInput,
+    TranslateInput,
 )
 
 
@@ -74,6 +75,8 @@ class OperationRegistry:
         self._register("create_sphere", CreateSphereInput, self.kernel.create_sphere)
         self._register("create_cone", CreateConeInput, self.kernel.create_cone)
         self._register("create_torus", CreateTorusInput, self.kernel.create_torus)
+        # Placement
+        self._register("translate", TranslateInput, self.kernel.translate)
         # Booleans
         self._register("boolean_union", BooleanInput, self.kernel.boolean_union)
         self._register("boolean_cut", BooleanInput, self.kernel.boolean_cut)

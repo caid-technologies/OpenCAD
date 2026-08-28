@@ -54,6 +54,7 @@ from opencad.kernel.operations.schemas import (
     RevolveInput,
     ShellInput,
     SweepInput,
+    TranslateInput,
 )
 
 BooleanOp = Literal["boolean_union", "boolean_cut", "boolean_intersection"]
@@ -222,6 +223,32 @@ class AnalyticBackend:
             face_count=3,
         )
         return self._success(shape, "create_cylinder")
+
+    def translate(self, payload: TranslateInput) -> OperationResult:
+        shape = self.store.get(payload.shape_id)
+        if not shape:
+            return self._shape_not_found(payload.shape_id)
+
+        dx, dy, dz = payload.offset
+        translated_bbox = BoundingBox(
+            min_x=shape.bbox.min_x + dx,
+            min_y=shape.bbox.min_y + dy,
+            min_z=shape.bbox.min_z + dz,
+            max_x=shape.bbox.max_x + dx,
+            max_y=shape.bbox.max_y + dy,
+            max_z=shape.bbox.max_z + dz,
+        )
+        translated = self._make_shape(
+            kind="translate",
+            bbox=translated_bbox,
+            volume=shape.volume,
+            parameters=payload.model_dump(),
+            manifold=shape.manifold,
+            edge_count=len(shape.edge_ids),
+            face_count=len(shape.face_ids),
+            source_ids=[shape.id],
+        )
+        return self._success(translated, "translate")
 
     def create_sphere(self, payload: CreateSphereInput) -> OperationResult:
         if payload.radius <= self.tolerance:

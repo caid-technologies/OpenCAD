@@ -74,6 +74,22 @@ class Part:
             depends_on=[],
         )
 
+    def translate(
+        self,
+        offset: tuple[float, float, float],
+        *,
+        name: str = "Translate",
+    ) -> Self:
+        """Translate the active shape by ``(dx, dy, dz)``."""
+        feature_id, shape_id = self._require_shape()
+        return self._apply(
+            "translate",
+            {"shape_id": shape_id, "offset": offset},
+            feature_name=name,
+            depends_on=[feature_id],
+            tree_parameters={"shape_id": feature_id, "offset": offset},
+        )
+
     def sphere(self, radius: float, *, name: str = "Sphere") -> Self:
         return self._apply(
             "create_sphere",

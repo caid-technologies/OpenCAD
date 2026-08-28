@@ -34,6 +34,14 @@ class CreateTorusInput(BaseModel):
     minor_radius: float
 
 
+# ── Placement ───────────────────────────────────────────────────────
+
+
+class TranslateInput(BaseModel):
+    shape_id: str = Field(min_length=1)
+    offset: tuple[float, float, float]
+
+
 # ── Booleans ────────────────────────────────────────────────────────
 
 
