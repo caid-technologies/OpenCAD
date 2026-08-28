@@ -11,13 +11,14 @@ Create the model as readable OpenCAD Python, export it with the native OCCT back
 
 1. Extract dimensions, units, geometry, holes, clearances, and output format. Use millimeters unless specified otherwise. Ask only when a missing dimension materially changes the part; otherwise state the assumption.
 2. Prefer STEP for editable/manufacturing geometry and STL for a triangulated 3D-printing deliverable. Create both when requested.
-3. Read [references/opencad-api.md](references/opencad-api.md) before writing a model. Give every project its own directory named from the request unless the user specifies a location. Create `README.md` for project context, `assembly.py` as the master composition entry point, `parameters.py` when dimensions are shared, a `components/` Python package for component modules, and an `outputs/` directory for generated artifacts. Honor explicitly requested filenames or locations instead.
+3. Read [references/opencad-api.md](references/opencad-api.md) before writing a model. At the start of every run, create a fresh project directory with `scripts/create_project.py` and use the returned path as `PROJECT_DIR`. The helper creates a UUID-named directory under `~/forma-workspace/`; never derive the project ID from the request. Keep every source file, README, component, and generated artifact inside `PROJECT_DIR`. Create `README.md` for project context, `assembly.py` as the master composition entry point, `parameters.py` when dimensions are shared, a `components/` Python package for component modules, and an `outputs/` directory for generated artifacts. Honor explicitly requested filenames inside `PROJECT_DIR`, but do not replace the shared root or generated project ID.
 4. Keep the model parametric: assign important dimensions to named constants, have component modules expose named builders or parts, and create one final `Part` in `assembly.py`. Leave that final part as the last generated shape in `assembly.py` (or the explicitly requested master file). Do not call `Part.export()` in the model; the build helper owns export and validation.
 5. Ensure `opencad[occt]` is installed. If importing OpenCAD fails, explain the dependency and ask before installing it into the active Python environment.
-6. Resolve this skill's directory, stay in the user's workspace, and run the helper by its absolute path:
+6. Resolve this skill's directory, create the project directory by its absolute path, stay inside the returned project directory, and run the build helper by its absolute path:
 
    ```bash
-   python /path/to/create-cad-files/scripts/build_cad_file.py PROJECT/assembly.py PROJECT/outputs/assembly.step --tree-output PROJECT/outputs/assembly.tree.json
+   PROJECT_DIR=$(python /path/to/create-cad-files/scripts/create_project.py)
+   python /path/to/create-cad-files/scripts/build_cad_file.py "$PROJECT_DIR/assembly.py" "$PROJECT_DIR/outputs/assembly.step" --tree-output "$PROJECT_DIR/outputs/assembly.tree.json"
    ```
 
    Use an `.stl` output name for STL. The helper refuses to replace files unless `--force` is explicitly supplied.

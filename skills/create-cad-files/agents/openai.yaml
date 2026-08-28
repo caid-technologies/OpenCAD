@@ -1,4 +1,4 @@
 interface:
   display_name: "Create CAD Files"
   short_description: "Create validated STEP and STL models"
-  default_prompt: "Use $create-cad-files to create a dimensioned CAD project in its own directory. Create README.md for context, assembly.py as the master composition entry point, nested components/ Python packages for parts and subcomponents, and validated STEP or STL artifacts under outputs/."
+  default_prompt: "Use $create-cad-files to create a dimensioned CAD project under ~/forma-workspace/<generated-uuid>/. Create the project directory with the bundled allocator, then put README.md, assembly.py, nested components/ Python packages, and validated STEP or STL artifacts under that directory's outputs/."
