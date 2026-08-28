@@ -7,12 +7,12 @@ from .models import BoundingBox
 
 def box_bbox(length: float, width: float, height: float) -> BoundingBox:
     return BoundingBox(
-        min_x=0.0,
-        min_y=0.0,
-        min_z=0.0,
-        max_x=length,
-        max_y=width,
-        max_z=height,
+        min_x=-length / 2.0,
+        min_y=-width / 2.0,
+        min_z=-height / 2.0,
+        max_x=length / 2.0,
+        max_y=width / 2.0,
+        max_z=height / 2.0,
     )
 
 

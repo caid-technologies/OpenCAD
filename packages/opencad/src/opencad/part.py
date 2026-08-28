@@ -59,6 +59,7 @@ class Part:
         return self
 
     def box(self, length: float, width: float, height: float, *, name: str = "Box") -> Self:
+        """Create a box centered at the modeling origin."""
         return self._apply(
             "create_box",
             {"length": length, "width": width, "height": height},

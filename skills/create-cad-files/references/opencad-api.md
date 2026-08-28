@@ -51,7 +51,7 @@ Build arbitrary planar profiles from consecutive lines and close the final point
 - `.linear_pattern(direction=(...), count=n, spacing=value)`
 - `.circular_pattern(axis_origin=(...), axis_direction=(...), count=n, angle=360)`
 
-Primitive solids start at the modeling origin. Use `.translate((dx, dy, dz))` to position a completed 3-D primitive or other active shape. The operation creates a new positioned feature while preserving the fluent `Part` handle. For booleans, create the target, create the tool, position either shape as needed, then make the target's boolean operation the final call:
+Boxes are centered at the modeling origin in both backends. For example, `Part().box(10, 5, 3)` spans approximately `(-5, -2.5, -1.5)` to `(5, 2.5, 1.5)`. Use `.translate((dx, dy, dz))` to position a completed 3-D primitive or other active shape. The operation creates a new positioned feature while preserving the fluent `Part` handle. For booleans, create the target, create the tool, position either shape as needed, then make the target's boolean operation the final call:
 
 ```python
 outer = Part(name="Outer").cylinder(14.0, 10.0)
