@@ -194,6 +194,7 @@ from opencad.kernel.operations.schemas import (
     ShellInput,
     SketchSegment,
     SweepInput,
+    TranslateInput,
 )
 
 logger = logging.getLogger(__name__)
@@ -808,6 +809,34 @@ class OcctBackend:
         native = wp.val().wrapped
         shape = self._register_shape("cylinder", native, payload.model_dump())
         return self._success(shape, "create_cylinder")
+
+    def translate(self, payload: TranslateInput) -> OperationResult:
+        meta = self._store.get(payload.shape_id)
+        if not meta:
+            return self._shape_not_found(payload.shape_id)
+
+        native = self._get_native(payload.shape_id)
+        if native is None:
+            return self._shape_not_found(payload.shape_id)
+
+        try:
+            trsf = gp_Trsf()
+            trsf.SetTranslation(gp_Vec(*payload.offset))
+            translated = BRepBuilderAPI_Transform(native, trsf, True).Shape()
+            shape = self._register_shape(
+                "translate",
+                translated,
+                payload.model_dump(),
+                source_ids=[meta.id],
+            )
+            return self._success(shape, "translate")
+        except Exception as exc:
+            return make_failure(
+                code=ErrorCode.TRANSFORM_FAILURE,
+                message=f"Translation failed: {exc}",
+                suggestion="Check the translation offset values.",
+                failed_check="transform_build",
+            )
 
     def create_sphere(self, payload: CreateSphereInput) -> OperationResult:
         if payload.radius <= self.tolerance:

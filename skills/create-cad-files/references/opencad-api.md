@@ -41,6 +41,7 @@ Build arbitrary planar profiles from consecutive lines and close the final point
 - `.sphere(radius)`
 - `.cone(radius1, radius2, height)`
 - `.torus(major_radius, minor_radius)`
+- `.translate((dx, dy, dz))`
 - `.extrude(sketch, depth=value, both=False)`
 - `.union(other)`, `.cut(other)`, `.intersect(other)`
 - `.fillet(edges="all" | "top" | [edge_ids], radius=value)`
@@ -50,11 +51,12 @@ Build arbitrary planar profiles from consecutive lines and close the final point
 - `.linear_pattern(direction=(...), count=n, spacing=value)`
 - `.circular_pattern(axis_origin=(...), axis_direction=(...), count=n, angle=360)`
 
-Primitive solids currently originate at the modeling origin. Prefer a positioned sketch for offset 2.5D geometry. For booleans, create the target, create the tool, then make the target's boolean operation the final call:
+Primitive solids start at the modeling origin. Use `.translate((dx, dy, dz))` to position a completed 3-D primitive or other active shape. The operation creates a new positioned feature while preserving the fluent `Part` handle. For booleans, create the target, create the tool, position either shape as needed, then make the target's boolean operation the final call:
 
 ```python
 outer = Part(name="Outer").cylinder(14.0, 10.0)
 inner = Part(name="Clearance").cylinder(8.0, 10.0)
+inner.translate((0.0, 0.0, 2.0))
 outer.cut(inner, name="Bore")
 ```
 

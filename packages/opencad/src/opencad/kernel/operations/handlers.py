@@ -51,6 +51,7 @@ from opencad.kernel.operations.schemas import (
     SelectorQuery,
     ShellInput,
     SweepInput,
+    TranslateInput,
 )
 
 
@@ -99,6 +100,9 @@ class OpenCadKernel:
 
     def create_torus(self, payload: CreateTorusInput) -> OperationResult:
         return self._backend.create_torus(payload)
+
+    def translate(self, payload: TranslateInput) -> OperationResult:
+        return self._backend.translate(payload)
 
     def boolean_union(self, payload: BooleanInput) -> OperationResult:
         return self._backend.boolean_union(payload)

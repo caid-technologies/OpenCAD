@@ -19,6 +19,7 @@ from opencad.kernel.operations.schemas import (
     ImportStlInput,
     ImportStepInput,
     OffsetShapeInput,
+    TranslateInput,
 )
 
 
@@ -74,6 +75,24 @@ def test_create_sphere_success(kernel: OpenCadKernel) -> None:
     assert isinstance(result, Success)
     assert result.shape is not None
     assert result.shape.volume > 0.0
+
+
+def test_translate_moves_bbox_without_changing_volume(kernel: OpenCadKernel) -> None:
+    box = kernel.create_box(CreateBoxInput(length=2.0, width=3.0, height=4.0))
+    assert isinstance(box, Success) and box.shape is not None and box.shape_id
+
+    result = kernel.translate(TranslateInput(shape_id=box.shape_id, offset=(10.0, -2.0, 5.0)))
+
+    assert isinstance(result, Success)
+    assert result.shape is not None
+    assert result.shape.kind == "translate"
+    assert result.shape.volume == pytest.approx(box.shape.volume)
+    assert result.shape.bbox.min_x == pytest.approx(10.0)
+    assert result.shape.bbox.min_y == pytest.approx(-2.0)
+    assert result.shape.bbox.min_z == pytest.approx(5.0)
+    assert result.shape.bbox.max_x == pytest.approx(12.0)
+    assert result.shape.bbox.max_y == pytest.approx(1.0)
+    assert result.shape.bbox.max_z == pytest.approx(9.0)
 
 
 def test_create_box_invalid_input(kernel: OpenCadKernel) -> None:
@@ -290,6 +309,7 @@ def test_registry_has_all_10_operations(registry: OperationRegistry) -> None:
         "export_step",
         "import_stl",
         "export_stl",
+        "translate",
     }.issubset(set(ops))
 
 

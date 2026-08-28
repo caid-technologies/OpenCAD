@@ -412,13 +412,13 @@ class TestRegistryNewOps:
             "chamfer_edges", "shell", "draft",
             "create_sketch", "extrude",
             "revolve", "sweep", "loft",
-            "linear_pattern", "circular_pattern", "mirror",
+            "linear_pattern", "circular_pattern", "mirror", "translate",
         ]
         for op in expected_new:
             assert op in ops, f"Expected '{op}' in registered operations"
 
     def test_new_ops_have_schemas(self, registry: OperationRegistry) -> None:
-        for op in ["chamfer_edges", "shell", "draft", "loft", "revolve", "mirror"]:
+        for op in ["chamfer_edges", "shell", "draft", "loft", "revolve", "mirror", "translate"]:
             schema = registry.get_json_schema(op)
             assert "properties" in schema
             assert "x-opencad-version" in schema

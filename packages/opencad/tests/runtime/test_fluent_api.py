@@ -44,6 +44,36 @@ def test_fluent_boolean_chain_records_dependencies() -> None:
     assert len(node.depends_on) == 2
 
 
+def test_fluent_translate_positions_shape_and_records_dependency() -> None:
+    reset_default_context()
+    part = Part().box(2, 3, 4).translate((10.0, -2.0, 5.0))
+
+    ctx = get_default_context()
+    assert part.feature_id is not None
+    assert part.shape_id is not None
+    translated = ctx.kernel.store.get(part.shape_id)
+    assert translated is not None
+    assert translated.bbox.min_x == pytest.approx(10.0)
+    assert translated.bbox.min_y == pytest.approx(-2.0)
+    assert translated.bbox.min_z == pytest.approx(5.0)
+    assert translated.bbox.max_x == pytest.approx(12.0)
+    assert translated.bbox.max_y == pytest.approx(1.0)
+    assert translated.bbox.max_z == pytest.approx(9.0)
+    node = ctx.tree.nodes[part.feature_id]
+    assert node.operation == "translate"
+    assert node.depends_on == ["feat-0001"]
+
+    rebuilt_tree = ctx.rebuild_tree()
+    rebuilt_node = rebuilt_tree.nodes[part.feature_id]
+    assert rebuilt_node.status == "built"
+    assert rebuilt_node.shape_id is not None
+    rebuilt = ctx.kernel.store.get(rebuilt_node.shape_id)
+    assert rebuilt is not None
+    assert rebuilt.bbox.min_x == pytest.approx(10.0)
+    assert rebuilt.bbox.min_y == pytest.approx(-2.0)
+    assert rebuilt.bbox.min_z == pytest.approx(5.0)
+
+
 def test_fluent_part_exports_stl_by_extension(tmp_path: Path) -> None:
     reset_default_context()
     output = tmp_path / "box.stl"
@@ -58,6 +88,30 @@ def test_fluent_part_rejects_unknown_export_extension(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match=".step, .stp, or .stl"):
         Part().box(1, 1, 1).export(str(tmp_path / "box.obj"))
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("OCP") is None, reason="CadQuery/OCP not installed"
+)
+def test_fluent_translate_moves_a_real_occt_shape() -> None:
+    from opencad.kernel.core.backend_factory import create_backend
+
+    ctx = RuntimeContext(backend=create_backend("occt", require_native=True))
+    set_default_context(ctx)
+    try:
+        part = Part().box(2.0, 3.0, 4.0).translate((10.0, -2.0, 5.0))
+
+        assert part.shape_id is not None
+        translated = ctx.kernel.store.get(part.shape_id)
+        assert translated is not None
+        assert translated.bbox.min_x == pytest.approx(10.0)
+        assert translated.bbox.min_y == pytest.approx(-2.0)
+        assert translated.bbox.min_z == pytest.approx(5.0)
+        assert translated.bbox.max_x == pytest.approx(12.0)
+        assert translated.bbox.max_y == pytest.approx(1.0)
+        assert translated.bbox.max_z == pytest.approx(9.0)
+    finally:
+        reset_default_context()
 
 
 def test_fluent_sketch_writes_profile_order_metadata() -> None:

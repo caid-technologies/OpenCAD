@@ -39,6 +39,7 @@ from opencad.kernel.operations.schemas import (
     RevolveInput,
     ShellInput,
     SweepInput,
+    TranslateInput,
 )
 
 
@@ -62,6 +63,10 @@ class KernelBackend(Protocol):
     def create_cone(self, payload: CreateConeInput) -> OperationResult: ...
 
     def create_torus(self, payload: CreateTorusInput) -> OperationResult: ...
+
+    # ── Placement ────────────────────────────────────────────────────
+
+    def translate(self, payload: TranslateInput) -> OperationResult: ...
 
     # ── Booleans ────────────────────────────────────────────────────
 

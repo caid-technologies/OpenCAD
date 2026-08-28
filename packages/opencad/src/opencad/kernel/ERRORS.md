@@ -18,6 +18,8 @@
   - Fix: reduce radius or enlarge the source feature.
 - `OFFSET_COLLAPSE`: Negative offset collapses one or more shape dimensions.
   - Fix: use a smaller magnitude negative offset.
+- `TRANSFORM_FAILURE`: Placement transform could not be applied to the active shape.
+  - Fix: check the translation offset and source shape.
 - `IO_ERROR`: STEP import/export file read/write failed.
   - Fix: verify filesystem path and permissions.
 - `UNSUPPORTED_STEP`: File extension is not `.step` or `.stp`.
