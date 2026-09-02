@@ -381,31 +381,6 @@ Every integration uses the same instructions, scripts, and references. The
 skill turns a dimensional request into an OpenCAD Python model, then atomically
 exports and validates STEP, STP, or STL.
 
-## Examples
-
-The [`examples/`](examples/README.md) directory contains end-to-end scripts for common
-device-development workflows:
-
-- `hardware_mounting_bracket.py` — bracket with fastener and cable pass-through holes
-- `hardware_pcb_carrier.py` — PCB carrier plate with mounting holes and clearance slot
-- `software_hmi_panel.py` — front panel for an operator interface with button and encoder cutouts
-- `firmware_programmer_fixture.py` — pogo-pin fixture plate for programming/debug access
-- `full_device_cable_grommet.py` — concentric cable grommet built from primitive booleans
-- `round_spray_bottle.py` — circular reservoir with an integrated trigger and nozzle
-
-Run an example from the repository root with:
-
-```bash
-python -m opencad.cli run examples/hardware_mounting_bracket.py \
-  --export bracket.step \
-  --tree-output bracket-tree.json
-```
-
-The agent service generates and executes OpenCAD Python through LiteLLM for every `/chat`
-request. Provider and model can be supplied as `llm_provider` and `llm_model`, or configured
-with `OPENCAD_LLM_PROVIDER` and `OPENCAD_LLM_MODEL`. Responses include `generated_code`,
-executed operations, and the updated feature tree.
-
 ## Documentation
 
 - [CHANGELOG.md](CHANGELOG.md) - release notes
