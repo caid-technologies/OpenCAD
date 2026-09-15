@@ -1,4 +1,4 @@
-"""Known defects from the September 2026 audit, NOT silently certified features.
+"""Audit regressions: draft is repaired; four other cases remain known defects.
 
 Each xfail is strict: a repaired feature produces XPASS and fails until the
 marker is removed. --strict-regressions runs all of these as ordinary failures.
@@ -16,14 +16,18 @@ def _known_defect(request, reason):
     request.node.add_marker(pytest.mark.xfail(strict=True, raises=AssertionError, reason=reason))
 
 
-def test_draft_uses_a_neutral_plane(request, registry, backend, assert_solid):
+def test_draft_uses_a_neutral_plane(registry, backend, assert_solid):
     box = registry.call("create_box", {"length": 10, "width": 10, "height": 10})
     assert_solid(box, volume=1000)
     side = max(backend.get_topology(box.shape_id).faces, key=lambda face: face.centroid[0])
     result = registry.call("draft", {"shape_id": box.shape_id, "face_ids": [side.id], "angle": 5})
-    _known_defect(request, "OCCT-001: draft passes gp_Pnt where OCCT requires gp_Pln")
     shape = assert_solid(result)
     assert shape.BoundingBox().xlen != pytest.approx(10, abs=1e-5)
+    slope = math.tan(math.radians(5))
+    assert shape.Volume() == pytest.approx(1000, rel=1e-7)
+    for z in (-5, 5):
+        rim = [v.X for v in shape.Vertices() if abs(v.Z - z) < 1e-6]
+        assert max(rim) == pytest.approx(5 - z * slope, abs=1e-6)
 
 
 def test_top_selector_is_geometric(request, context, backend):

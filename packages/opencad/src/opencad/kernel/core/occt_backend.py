@@ -52,6 +52,7 @@ BRepPrimAPI_MakeTorus = None
 
 # Geometry primitives
 gp_Pnt = None
+gp_Pln = None
 gp_Dir = None
 gp_Ax1 = None
 gp_Ax2 = None
@@ -121,6 +122,7 @@ if HAS_OCCT:  # pragma: no branch
 
     gp_mod = importlib.import_module("OCP.gp")
     gp_Pnt = gp_mod.gp_Pnt
+    gp_Pln = gp_mod.gp_Pln
     gp_Dir = gp_mod.gp_Dir
     gp_Ax1 = gp_mod.gp_Ax1
     gp_Ax2 = gp_mod.gp_Ax2
@@ -1338,49 +1340,98 @@ class OcctBackend:
         if not meta:
             return self._shape_not_found(payload.shape_id)
         if not payload.face_ids:
-            return self._invalid_input("At least one face_id required for draft.")
+            return self._invalid_input("At least one face_id is required for draft.")
         if abs(payload.angle) <= self.tolerance or abs(payload.angle) >= 90.0:
-            return self._invalid_input("Draft angle must be > 0 and < 90 degrees.")
+            return self._invalid_input("Draft angle magnitude must be > tolerance and < 90 degrees.")
+        if len(set(payload.face_ids)) != len(payload.face_ids):
+            return self._invalid_input("Draft face_ids must not contain duplicates.")
+        # A numeric suffix is not enough: foreign/stale face IDs must never
+        # select an unrelated face with the same index on the current shape.
+        for fid in payload.face_ids:
+            if fid not in meta.face_ids:
+                return self._invalid_input(f"Face '{fid}' does not belong to shape '{meta.id}'.")
 
         native = self._get_native(payload.shape_id)
         if native is None:
             return self._shape_not_found(payload.shape_id)
 
         try:
-            # Use CadQuery's shell-based draft approach for simplicity
-            # OCCT draft: BRepOffsetAPI_DraftAngle
+            solid_count = len(cq.Shape.cast(native).Solids())
+            if solid_count == 0 or not _is_manifold(native):
+                return self._invalid_input("Draft requires a valid solid or compound of solids.")
+
+            geom = importlib.import_module("OCP.GeomAbs")
+            faces = [_face_by_index(native, int(fid.rsplit(":", 1)[1])) for fid in payload.face_ids]
+            for fid, face in zip(payload.face_ids, faces):
+                if BRepAdaptor_Surface(face).GetType() not in (
+                    geom.GeomAbs_Plane, geom.GeomAbs_Cylinder, geom.GeomAbs_Cone,
+                ):
+                    return self._invalid_input(
+                        f"Face '{fid}' is not planar, cylindrical, or conical; draft is unsupported."
+                    )
+
+            # Scale finite, non-zero schema-validated vectors before OCCT
+            # normalization so very large/small direction magnitudes are safe.
+            def direction(values: tuple[float, float, float]) -> Any:
+                scale = max(abs(value) for value in values)
+                return gp_Dir(*(value / scale for value in values))
+
+            pull = direction(payload.pull_direction)
+            normal = direction(payload.neutral_plane_normal or payload.pull_direction)
+            neutral = gp_Pln(gp_Pnt(*payload.neutral_plane_origin), normal)
+            angle_rad = math.radians(payload.angle)
             DraftAngle = importlib.import_module("OCP.BRepOffsetAPI").BRepOffsetAPI_DraftAngle
             draft_op = DraftAngle(native)
-            pull = gp_Dir(*payload.pull_direction)
-            angle_rad = math.radians(payload.angle)
 
-            for fid in payload.face_ids:
-                parts = fid.split(":face:")
-                if len(parts) != 2 or not parts[1].isdigit():
-                    return self._invalid_input(f"Invalid face ID format: '{fid}'")
-                idx = int(parts[1])
-                face = _face_by_index(native, idx)
-                draft_op.Add(face, pull, angle_rad, gp_Pnt(0, 0, 0))
+            for fid, face in zip(payload.face_ids, faces):
+                draft_op.Add(face, pull, angle_rad, neutral)
+                # IsDone after Build alone does not establish that every
+                # requested face was accepted. Never publish a partial draft.
+                if not draft_op.AddDone():
+                    return make_failure(
+                        code=ErrorCode.DRAFT_FAILURE,
+                        message=f"Draft could not add face '{fid}' (status: {draft_op.Status()}).",
+                        suggestion="Check the face, pull direction, and neutral-plane intersection.",
+                        failed_check="draft_add",
+                    )
 
             draft_op.Build()
             if not draft_op.IsDone():
                 return make_failure(
                     code=ErrorCode.DRAFT_FAILURE,
-                    message="Draft did not converge.",
-                    suggestion="Reduce draft angle or choose different faces.",
+                    message=f"Draft did not converge (status: {draft_op.Status()}).",
+                    suggestion="Reduce draft angle or choose different faces/neutral plane.",
                     failed_check="draft_build",
                 )
 
             result_native = draft_op.Shape()
+            if result_native.IsNull() or not _is_manifold(result_native):
+                return make_failure(
+                    code=ErrorCode.DRAFT_FAILURE,
+                    message="Draft produced invalid native geometry.",
+                    suggestion="Reduce the angle or adjust the neutral plane.",
+                    failed_check="draft_validity",
+                )
+            result_volume = _volume_from_shape(result_native)
+            if (not math.isfinite(result_volume) or result_volume <= self.tolerance ** 3
+                    or len(cq.Shape.cast(result_native).Solids()) != solid_count):
+                return make_failure(
+                    code=ErrorCode.DRAFT_FAILURE,
+                    message="Draft did not preserve valid, non-zero-volume solid geometry.",
+                    suggestion="Reduce the angle to avoid collapsing a solid.",
+                    failed_check="draft_solid",
+                )
+
             shape = self._register_shape(
                 "draft", result_native, payload.model_dump(), source_ids=[meta.id],
             )
+            self._inherit_modified_face_owners(shape.id, [meta.id], draft_op)
             return self._success(shape, "draft")
         except Exception as exc:
             return make_failure(
                 code=ErrorCode.DRAFT_FAILURE,
                 message=f"Draft failed: {exc}",
-                suggestion="Reduce draft angle or adjust face selection.",
+                suggestion="Check the angle, face selection, pull direction, and neutral plane.",
                 failed_check="draft_build",
             )
 

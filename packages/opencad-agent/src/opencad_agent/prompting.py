@@ -67,7 +67,7 @@ Part methods (all return self for chaining):
   .fillet(*, edges=None|"all"|"top"|[id,...], radius, name=str)
   .chamfer(*, edges=None|"all"|"top"|[id,...], distance, name=str)
   .shell(*, face_ids=[id,...], thickness, name=str)
-  .draft(*, face_ids=[id,...], angle, pull_direction=(x,y,z), name=str)
+  .draft(*, face_ids=[id,...], angle, pull_direction=(0,0,1), neutral_plane_origin=(0,0,0), neutral_plane_normal=None, name=str)  # signed degrees; world-space plane; normal defaults to pull direction
   .offset(distance, *, name=str)
   .linear_pattern(*, direction=(x,y,z), count, spacing, name=str)
   .circular_pattern(*, axis_origin=(x,y,z), axis_direction=(x,y,z), count, angle=360.0, name=str)
