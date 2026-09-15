@@ -1,16 +1,23 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
-from opencad.kernel.client import KernelClient, LocalKernelClient
+from opencad.kernel.client import KernelClient, LocalKernelClient, result_to_dict
 from opencad.kernel.core.backend import KernelBackend
 from opencad.kernel.core.models import TopologyMap
 from opencad.kernel.core.topology import select as select_topology
 from opencad.kernel.operations.handlers import OpenCadKernel
 from opencad.kernel.operations.registry import OperationRegistry
 from opencad.kernel.operations.schemas import SelectorQuery
-from opencad.kernel_adapter import execute_feature_node, registry_result_to_dict
+from opencad.kernel_adapter import (
+    normalize_feature_operation,
+    registry_result_to_dict,
+    resolve_feature_references,
+)
+from opencad.rehydration import prepare_tree
 from opencad.tree.models import FeatureNode, FeatureTree
 from opencad.tree.service import FeatureTreeService
 
@@ -32,7 +39,9 @@ class RuntimeContext:
         self._external_kernel = kernel_client
         self.kernel = OpenCadKernel(id_strategy=id_strategy, backend=backend)
         self.registry = OperationRegistry(self.kernel)
-        self.tree = FeatureTree(root_id="root")
+        self._kernel_session_id = str(uuid4())
+        self._replay_payloads: dict[str, str] = {}
+        self.tree = FeatureTree(root_id="root", kernel_session_id=self._kernel_session_id)
         self.last_feature_id: str | None = None
         self.last_shape_id: str | None = None
         self._feature_counter = 1
@@ -63,9 +72,11 @@ class RuntimeContext:
         return sketch_id
 
     def sync_counters(self) -> None:
-        self._feature_counter = 1
-        self._sketch_counter = 1
-        for node_id in self.tree.nodes:
+        # Inactive branches also reserve feature/sketch identities.
+        node_ids = set(self.tree.nodes)
+        for snapshot in self.tree.branch_snapshots.values():
+            node_ids.update(snapshot)
+        for node_id in node_ids:
             if node_id.startswith("feat-"):
                 tail = node_id.split("-")[-1]
                 if tail.isdigit():
@@ -152,15 +163,48 @@ class RuntimeContext:
         self.tree = tree
         self.sync_counters()
 
-        latest_shape = None
-        latest_feature = None
+        self._sync_cursors()
+
+    def _sync_cursors(self) -> None:
+        self.last_feature_id = self.last_shape_id = None
         for node_id, node in self.tree.nodes.items():
-            if node_id == self.tree.root_id:
-                continue
-            latest_feature = node_id
-            latest_shape = node.shape_id or latest_shape
-        self.last_feature_id = latest_feature
-        self.last_shape_id = latest_shape
+            if (node.status == "built" and not node.suppressed and node.shape_id
+                    and self._has_shape(node.shape_id)):
+                self.last_feature_id, self.last_shape_id = node_id, node.shape_id
+
+    def _has_shape(self, shape_id: str) -> bool:
+        if self._external_kernel is not None:
+            # External ownership cannot be certified from the local shape store.
+            return False
+        if self.kernel.store.get(shape_id) is None:
+            return False
+        native = self.kernel.get_native_shape(shape_id)
+        if native is not None:
+            is_null = getattr(native, "IsNull", None)
+            return not (callable(is_null) and is_null())
+        try:
+            # Analytic backends legitimately have no native handle; a missing
+            # OCCT handle, on the other hand, fails this topology lookup.
+            return self.kernel.get_topology(shape_id).shape_id == shape_id
+        except (ValueError, KeyError):
+            return False
+
+    def _prepare_rebuild(self, tree: FeatureTree) -> FeatureTree:
+        if self._external_kernel is not None:
+            raise NotImplementedError(
+                "Tree rehydration/rebuild requires the owning in-process kernel; "
+                "external KernelClient ownership is not supported by RuntimeContext replay."
+            )
+        prepared = prepare_tree(
+            tree, session_id=self._kernel_session_id, has_shape=self._has_shape,
+            occupied_ids=set(self.kernel.store.all_ids()),
+        )
+        self.kernel.store.reserve_ids({
+            node.replay_shape_id
+            for nodes in [prepared.nodes, *prepared.branch_snapshots.values()]
+            for node in nodes.values() if node.replay_shape_id
+        })
+        return prepared
 
     def export_step(self, shape_id: str, filepath: str) -> None:
         response = registry_result_to_dict(self.registry, "export_step", {"shape_id": shape_id, "filepath": filepath})
@@ -218,21 +262,55 @@ class RuntimeContext:
         )
 
     def load_tree_json(self, filepath: str) -> FeatureTree:
+        """Load metadata and invalidate unavailable caches; call rebuild_tree next.
+
+        Legacy and foreign-session trees are replayed, never trusted as native
+        geometry. Parsing/collision errors leave the current tree unchanged.
+        """
         payload = Path(filepath).read_text(encoding="utf-8")
-        self.tree = FeatureTreeService.deserialize(payload)
-        self._ensure_root()
-        self.sync_counters()
+        candidate = FeatureTreeService.deserialize(payload)
+        if candidate.root_id not in candidate.nodes:
+            candidate.nodes[candidate.root_id] = FeatureNode(
+                id=candidate.root_id, name="Root", operation="seed", status="built",
+            )
+        self.adopt_tree(self._prepare_rebuild(candidate))
         return self.tree
 
     def _kernel_client_from_tree(self, node: FeatureNode, tree: FeatureTree) -> str:
-        return execute_feature_node(self.registry, node, tree)
+        operation, params = normalize_feature_operation(node.operation, node.parameters)
+        params = resolve_feature_references(params, tree)
+        target = node.replay_shape_id
+        signature = json.dumps([operation, params], sort_keys=True) if target else ""
+        if target and self._has_shape(target):
+            # Shared prefixes in inactive branches may already have replayed.
+            # Reuse only results this runtime actually built from this payload.
+            if self._replay_payloads.get(target) != signature:
+                raise RuntimeError(f"Replay identity '{target}' already belongs to different geometry.")
+            return target
+        if target and self.kernel.store.get(target) is not None:
+            self.kernel.store.discard(target)  # Orphan metadata; no live native shape.
+        response = result_to_dict(self.registry.call(operation, params, replay_shape_id=target))
+        if not response.get("ok") or not response.get("shape_id"):
+            detail = response.get("message", "no shape_id returned")
+            if operation in {"import_step", "import_stl"}:
+                detail = f"{detail} (source: {params.get('filepath')!r})"
+            raise RuntimeError(f"Rebuild failed for '{node.id}': {detail}")
+        shape_id = str(response["shape_id"])
+        if target:
+            if shape_id != target:
+                raise RuntimeError(f"Operation '{operation}' did not preserve replay identity '{target}'.")
+            self._replay_payloads[shape_id] = signature
+        return shape_id
 
     def rebuild_tree(self, *, continue_on_error: bool = False) -> FeatureTree:
+        prepared = self._prepare_rebuild(self.tree)
         self.tree = FeatureTreeService.rebuild(
-            self.tree,
+            prepared,
             kernel_client=self._kernel_client_from_tree,
             continue_on_error=continue_on_error,
         )
+        self.sync_counters()
+        self._sync_cursors()
         return self.tree
 
 

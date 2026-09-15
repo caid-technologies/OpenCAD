@@ -17,6 +17,7 @@ class ShapeStore:
         # Set by OperationRegistry during replay so the next new_id() call
         # returns the stored identity instead of generating a fresh one.
         self._next_preset_id: str | None = None
+        self._reserved_ids: set[str] = set()
 
     def new_id(self, kind: str, *, preset_id: str | None = None) -> str:
         """Generate or accept a shape identifier.
@@ -33,8 +34,19 @@ class ShapeStore:
             return effective
         if self._id_strategy == "uuid":
             return str(uuid4())
-        self._counters[kind] += 1
-        return f"{kind}-{self._counters[kind]:04d}"
+        while True:
+            self._counters[kind] += 1
+            candidate = f"{kind}-{self._counters[kind]:04d}"
+            if candidate not in self._shapes and candidate not in self._reserved_ids:
+                return candidate
+
+    def reserve_ids(self, shape_ids: set[str]) -> None:
+        """Keep ordinary readable IDs out of a pending replay's namespace."""
+        self._reserved_ids.update(shape_ids)
+
+    def discard(self, shape_id: str) -> None:
+        """Remove orphaned metadata after its owning native shape is lost."""
+        self._shapes.pop(shape_id, None)
 
     def add(self, shape: ShapeData) -> ShapeData:
         self._shapes[shape.id] = shape

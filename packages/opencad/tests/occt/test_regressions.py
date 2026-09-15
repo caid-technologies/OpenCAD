@@ -1,19 +1,9 @@
-"""Audit regressions: draft/top/sweep/loft repaired; cold reload remains.
-
-Each xfail is strict: a repaired feature produces XPASS and fails until the
-marker is removed. --strict-regressions runs all of these as ordinary failures.
-Only the final defect assertion is inside xfail scope: setup errors must fail.
-"""
+"""Native regressions for all five repaired September 2026 audit cases."""
 from __future__ import annotations
 
 import math
 
 import pytest
-
-
-def _known_defect(request, reason):
-    # Apply after setup/control assertions; an unrelated setup failure stays red.
-    request.node.add_marker(pytest.mark.xfail(strict=True, raises=AssertionError, reason=reason))
 
 
 def test_draft_uses_a_neutral_plane(registry, backend, assert_solid):
@@ -83,7 +73,6 @@ def test_saved_tree_rehydrates_an_empty_kernel(request, context, tmp_path):
     fresh.load_tree_json(str(path))
     rebuilt = fresh.rebuild_tree().nodes[part.feature_id]
     native = fresh.kernel.get_native_shape(rebuilt.shape_id)
-    _known_defect(request, "OCCT-004: loaded built nodes skip native reconstruction")
     assert native is not None, "serialized shape IDs are not native geometry"
     shape = cq.Shape.cast(native)
     assert shape.isValid() and len(shape.Solids()) == 1
