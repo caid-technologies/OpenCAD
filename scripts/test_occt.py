@@ -73,7 +73,7 @@ def native_preflight() -> None:
     shape = prim.BRepPrimAPI_MakeBox(1.0, 1.0, 1.0).Shape()
     if shape.IsNull() or not check.BRepCheck_Analyzer(shape).IsValid():
         raise RuntimeError("OCCT preflight did not produce a valid box")
-    for distribution in ("cadquery", "cadquery-ocp", "pytest"):
+    for distribution in ("cadquery", "cadquery-ocp", "casadi", "nlopt", "pytest"):
         print(f"{distribution}=={importlib.metadata.version(distribution)}", flush=True)
 
 
@@ -97,7 +97,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"OCCT preflight failed: {type(exc).__name__}: {exc}\n"
             'Install the core native extra and pytest, for example:\n'
-            '  uv pip install --python .venv -e "./packages/opencad[occt]" "pytest>=8,<10"',
+            '  uv pip install --python .venv-occt -c scripts/occt-constraints.txt -e "./packages/opencad[occt]" "pytest>=8,<10"',
             file=sys.stderr,
         )
         return 2

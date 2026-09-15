@@ -28,6 +28,7 @@ jobs:
       PYTHONHASHSEED: "0"
       OMP_NUM_THREADS: "1"
       OPENBLAS_NUM_THREADS: "1"
+      PYTHONFAULTHANDLER: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -37,24 +38,25 @@ jobs:
         with:
           python-version: "3.11"
           enable-cache: true
-          cache-dependency-glob: packages/opencad/pyproject.toml
+          cache-dependency-glob: |
+            packages/opencad/pyproject.toml
+            scripts/occt-constraints.txt
       # Deliberately install only the editable core + native extra, not the
       # workspace's agent/backend/rendering stacks. Existing CI covers those.
       - name: Install native core test environment
         run: |
           uv venv --python 3.11 .venv-occt
-          uv pip install --python .venv-occt -e "./packages/opencad[occt]" "pytest>=8,<10"
+          uv pip install --python .venv-occt -c scripts/occt-constraints.txt -e "./packages/opencad[occt]" "pytest>=8,<10"
       - name: Record resolved dependencies
         run: |
           python -c "from pathlib import Path; Path('test-results').mkdir(exist_ok=True)"
           uv pip freeze --python .venv-occt > test-results/environment.txt
+      - name: Verify native process shutdown
+        run: uv run --no-project --python .venv-occt python scripts/diagnose_occt_exit.py
       - name: Test the no-skip gate
-        run: uv run --no-project --python .venv-occt python -m pytest scripts/tests/test_occt_runner.py --junitxml=test-results/gate.xml
+        run: uv run --no-project --python .venv-occt python -m pytest scripts/tests/test_occt_runner.py scripts/tests/test_occt_processes.py --junitxml=test-results/gate.xml
       - name: Run native geometry and lifecycle tests
         run: uv run --no-project --python .venv-occt python scripts/test_occt.py --junitxml=test-results/occt.xml
-      - name: Diagnose failed native process
-        if: failure()
-        run: uv run --no-project --python .venv-occt python scripts/diagnose_occt_exit.py
       - name: Upload test reports and environment
         if: always()
         uses: actions/upload-artifact@v4
