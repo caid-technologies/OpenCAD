@@ -57,7 +57,8 @@ this fix. Old native shapes may remain in the kernel as immutable prior results.
 - Literal native IDs not matching tree nodes remain supported. The owning kernel
   validates their availability. They refer to specific immutable geometry, not
   editable feature dependencies, and are not automatically redirected on edits.
-- Unrelated strings, nested settings, and list-valued parameters are not rewritten.
+- Unrelated strings, nested settings, and lists are not rewritten. The declared
+  loft `profile_ids` list is resolved separately; see [LOFT_REBUILD.md](LOFT_REBUILD.md).
   Existing scalar reference fields share the readiness check. Valid built-node
   references remain compatible.
 
@@ -74,7 +75,7 @@ and recovery, failed input builds, missing references/geometry, JSON round trips
 in the owning kernel, and exporting/reimporting a rebuilt sweep via STEP. Tests
 use UUID native IDs to prevent accidental equality with feature IDs.
 
-This repairs **#108**. Ordered loft lists remain tracked in **#109**, and cold
+This repairs **#108**. Ordered loft references are also repaired in **#109**; cold
 project reconstruction into a new kernel remains **#110**. This does not change
 sweep geometry algorithms, infer graph dependencies when manually replacing
 reference fields, or implement persistent topological naming.
