@@ -108,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
     ]
     pytest_args = [
         *(str(path) for path in paths),
-        "-ra", "--strict-markers", f"--durations={args.durations}",
+        "-ra", "--strict-markers", "--capture=sys", f"--durations={args.durations}",
     ]
     if args.strict_regressions:
         pytest_args.append("--runxfail")
@@ -117,7 +117,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.junitxml:
         args.junitxml.parent.mkdir(parents=True, exist_ok=True)
         pytest_args.append(f"--junitxml={args.junitxml}")
-    return int(pytest.main(pytest_args, plugins=[NativeCoverageGate()]))
+    # Native libraries own C/C++ stdout handles. Keep those descriptors stable
+    # instead of swapping them into pytest temporary files on every test phase.
+    # Python output is still captured; native diagnostics stream to the CI log.
+    gate = NativeCoverageGate()
+    status = int(pytest.main(pytest_args, plugins=[gate]))
+    print(
+        f"OCCT pytest exit={status}; test bodies={gate.calls}; "
+        f"plain skips={len(gate.skipped)}; known defects={len(gate.expected_failures)}",
+        flush=True,
+    )
+    return status
 
 
 if __name__ == "__main__":
