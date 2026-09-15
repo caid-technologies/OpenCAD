@@ -288,8 +288,17 @@ class Part:
         face_ids: list[str],
         angle: float,
         pull_direction: tuple[float, float, float] = (0.0, 0.0, 1.0),
+        neutral_plane_origin: tuple[float, float, float] = (0.0, 0.0, 0.0),
+        neutral_plane_normal: tuple[float, float, float] | None = None,
         name: str = "Draft",
     ) -> Self:
+        """Taper faces using signed degrees and a world-space neutral plane.
+
+        The default plane passes through the world origin, normal to
+        ``pull_direction``. Set its origin explicitly for translated parts.
+        For initially axis-parallel sides, positive angles taper inward on
+        the pull side and negative angles taper outward.
+        """
         feature_id, shape_id = self._require_shape()
         return self._apply(
             "draft",
@@ -298,6 +307,8 @@ class Part:
                 "face_ids": face_ids,
                 "angle": angle,
                 "pull_direction": pull_direction,
+                "neutral_plane_origin": neutral_plane_origin,
+                "neutral_plane_normal": neutral_plane_normal,
             },
             feature_name=name,
             depends_on=[feature_id],
@@ -306,6 +317,8 @@ class Part:
                 "face_ids": face_ids,
                 "angle": angle,
                 "pull_direction": pull_direction,
+                "neutral_plane_origin": neutral_plane_origin,
+                "neutral_plane_normal": neutral_plane_normal,
             },
         )
 

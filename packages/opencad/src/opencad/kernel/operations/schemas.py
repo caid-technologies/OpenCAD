@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, FiniteFloat, field_validator
 
 
 # ── Primitives ──────────────────────────────────────────────────────
@@ -74,12 +74,33 @@ class ShellInput(BaseModel):
 
 
 class DraftInput(BaseModel):
-    """Add a taper/draft angle to selected faces."""
+    """Taper selected faces about a world-space neutral plane.
+
+    Angles are signed degrees. By default the plane passes through the world
+    origin and is perpendicular to the pull direction. Its intersection with
+    each selected face remains fixed. For sides initially parallel to the pull
+    axis, positive angles taper inward on the pull side and negative outward.
+    """
 
     shape_id: str = Field(min_length=1)
     face_ids: list[str]
-    angle: float  # degrees
-    pull_direction: tuple[float, float, float] = (0.0, 0.0, 1.0)
+    angle: FiniteFloat  # signed degrees; backend validates the supported range
+    pull_direction: tuple[FiniteFloat, FiniteFloat, FiniteFloat] = (0.0, 0.0, 1.0)
+    neutral_plane_origin: tuple[FiniteFloat, FiniteFloat, FiniteFloat] = Field(
+        default=(0.0, 0.0, 0.0), description="Point on the neutral plane in world coordinates.",
+    )
+    neutral_plane_normal: tuple[FiniteFloat, FiniteFloat, FiniteFloat] | None = Field(
+        default=None, description="World-space plane normal; omitted/null uses pull_direction.",
+    )
+
+    @field_validator("pull_direction", "neutral_plane_normal")
+    @classmethod
+    def nonzero_direction(
+        cls, value: tuple[float, float, float] | None,
+    ) -> tuple[float, float, float] | None:
+        if value is not None and not any(value):
+            raise ValueError("Draft directions must be non-zero.")
+        return value
 
 
 class OffsetShapeInput(BaseModel):

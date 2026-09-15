@@ -98,11 +98,12 @@ assertion summary looks successful.
 
 ## Known defects are visible debt
 
-Five regression cases currently carry strict expected-failure marks:
+Draft (OCCT-001, #106) is now a normal passing regression; see
+[DRAFT.md](DRAFT.md) for the neutral-plane API and its native test coverage.
+Four other regression cases still carry strict expected-failure marks:
 
 | ID | Desired behavior | Existing defect |
 | --- | --- | --- |
-| OCCT-001 (#106) | A drafted face yields valid, geometrically tapered solid geometry | Native call passes `gp_Pnt` instead of a neutral `gp_Pln` |
 | OCCT-002 (#107) | `edges="top"` selects geometrically top edges | Selects first four enumerated edges |
 | OCCT-003-sweep (#108) | Changed section is resolved to its rebuilt native shape | `profile_id` / `path_id` are absent from reference resolution |
 | OCCT-003-loft (#109) | Changed sections rebuild a correctly sized loft | `profile_ids` list is not resolved |
@@ -112,7 +113,7 @@ These are tests, **not fixes**. Default CI reports them as XFAIL and prints an
 explicit known-defect summary. Setup/control assertions run before applying the
 expected-failure mark. Unexpected errors and strict XPASS results fail the run.
 After repairing an operation, remove its mark; do not weaken the assertion.
-`--strict-regressions` passes `--runxfail` and makes all five ordinary blockers.
+`--strict-regressions` passes `--runxfail` and makes the remaining four ordinary blockers.
 No claim of full operation correctness should be based on a run with XFAILs.
 
 ## Performance and isolation
