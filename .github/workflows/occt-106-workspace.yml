@@ -1,0 +1,21 @@
+name: OCCT 106 Workspace
+on:
+  push:
+    branches: [fix/occt-106-draft-neutral-plane]
+    paths: [.github/workflows/occt-106-workspace.yml]
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: git archive --format=zip HEAD -o opencad-source.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: occt-106-source
+          path: opencad-source.zip
+          retention-days: 1
