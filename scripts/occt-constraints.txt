@@ -1,0 +1,9 @@
+# Native test environment compatibility constraint, not a complete lockfile.
+# CadQuery 2.8.0 imports both NLopt 2.11.0 and CasADi. CasADi 3.8.0 with
+# that NLopt Windows wheel crashes at interpreter shutdown (0xC0000374 or
+# 0xC0000005), even for `python -c "import cadquery"` with no OpenCAD tests.
+# Upstream reproduction: https://github.com/CadQuery/cadquery/issues/1564#issuecomment-5532644183
+# OpenCAD reproduction: https://github.com/caid-technologies/OpenCAD/actions/runs/34972608238
+# Revisit this Windows-only pin after upstream fixes the wheel interaction;
+# both import orders, a native build, and the full native process must exit cleanly.
+casadi==3.7.2 ; sys_platform == "win32"
