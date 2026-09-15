@@ -104,18 +104,19 @@ Top-edge selection (OCCT-002, #107) is also a normal passing regression; see
 [EDGE_SELECTION.md](EDGE_SELECTION.md) for world-Z semantics and native coverage.
 Sweep rebuilding (OCCT-003-sweep, #108) also passes normally; see
 [SWEEP_REBUILD.md](SWEEP_REBUILD.md) for scalar references and edit/rebuild coverage.
-Two other regression cases still carry strict expected-failure marks:
+Loft rebuilding (OCCT-003-loft, #109) now passes normally; see
+[LOFT_REBUILD.md](LOFT_REBUILD.md) for ordered section references and native coverage.
+Only cold reload still carries a strict expected-failure mark.
 
 | ID | Desired behavior | Existing defect |
 | --- | --- | --- |
-| OCCT-003-loft (#109) | Changed sections rebuild a correctly sized loft | `profile_ids` list is not resolved |
 | OCCT-004 (#110) | Reloaded tree creates real geometry in an empty kernel | Saved `built` nodes are skipped during rebuild |
 
-These are tests, **not fixes**. Default CI reports them as XFAIL and prints an
+The cold-reload case is a test, **not a fix**. Default CI reports it as XFAIL and prints an
 explicit known-defect summary. Setup/control assertions run before applying the
 expected-failure mark. Unexpected errors and strict XPASS results fail the run.
 After repairing an operation, remove its mark; do not weaken the assertion.
-`--strict-regressions` passes `--runxfail` and makes the remaining two ordinary blockers.
+`--strict-regressions` passes `--runxfail` and makes cold reload an ordinary blocker.
 No claim of full operation correctness should be based on a run with XFAILs.
 
 ## Performance and isolation

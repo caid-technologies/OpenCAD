@@ -58,7 +58,7 @@ def test_built_status_alone_does_not_certify_reference(tree, key, change):
 
 def test_mixed_native_and_feature_ids_leave_unrelated_strings_and_lists_alone(tree):
     params = {"profile_id": "section", "path_id": "native-spine",
-              "name": "spine", "profile_ids": ["section", "spine"],
+              "name": "spine", "unrelated_profiles": ["section", "spine"],
               "settings": {"path_id": "spine"}}
     before = deepcopy(params)
     assert resolve_feature_references(params, tree) == {**before, "profile_id": "native-section"}

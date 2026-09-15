@@ -10,6 +10,7 @@ _REFERENCE_KEYS = (
     "shape_id", "shape_a_id", "shape_b_id", "base_id", "tool_id", "sketch_id",
     "profile_id", "path_id",
 )
+_REFERENCE_LIST_KEYS = ("profile_ids",)
 
 
 def normalize_feature_operation(operation: str, params: dict[str, Any]) -> tuple[str, dict[str, Any]]:
@@ -41,26 +42,40 @@ def normalize_feature_operation(operation: str, params: dict[str, Any]) -> tuple
     return op_name, mapped_params
 
 
-def resolve_feature_references(params: dict[str, Any], tree: FeatureTree) -> dict[str, Any]:
-    """Resolve scalar feature references without rewriting the saved parameters.
+def _resolve_shape_reference(value: Any, field: str, tree: FeatureTree) -> Any:
+    """Resolve one known feature; leave native IDs and invalid types to the kernel."""
+    if not isinstance(value, str) or value not in tree.nodes:
+        return value
+    source = tree.nodes[value]
+    if source.suppressed or source.status != "built" or not source.shape_id:
+        raise ValueError(
+            f"Cannot resolve '{field}' reference to feature '{value}': "
+            f"status='{source.status}', suppressed={source.suppressed}; "
+            "a built, unsuppressed feature with a shape_id is required."
+        )
+    return source.shape_id
 
-    A known feature must be built, unsuppressed, and have a shape ID. A stale
-    feature may still carry a formerly valid ID in imported/edited trees; never
-    pass that cached geometry to the kernel. Literal native IDs that are not
-    tree keys remain supported and are validated by the owning kernel.
+
+def resolve_feature_references(params: dict[str, Any], tree: FeatureTree) -> dict[str, Any]:
+    """Resolve declared scalar/list references without rewriting saved parameters.
+
+    Known features must be built, unsuppressed, and have a shape ID. Literal
+    native IDs remain supported and are validated by the owning kernel.
+    Ordered profile lists are copied without sorting or deduplicating; tuple
+    inputs are normalized to lists for the registry. Unrelated lists, nested
+    settings, and invalid schema values are not recursively rewritten.
     """
     resolved_params = dict(params)
     for key in _REFERENCE_KEYS:
-        value = resolved_params.get(key)
-        if isinstance(value, str) and value in tree.nodes:
-            source = tree.nodes[value]
-            if source.suppressed or source.status != "built" or not source.shape_id:
-                raise ValueError(
-                    f"Cannot resolve '{key}' reference to feature '{value}': "
-                    f"status='{source.status}', suppressed={source.suppressed}; "
-                    "a built, unsuppressed feature with a shape_id is required."
-                )
-            resolved_params[key] = source.shape_id
+        if key in params:
+            resolved_params[key] = _resolve_shape_reference(params[key], key, tree)
+    for key in _REFERENCE_LIST_KEYS:
+        values = params.get(key)
+        if isinstance(values, (list, tuple)):
+            resolved_params[key] = [
+                _resolve_shape_reference(value, f"{key}[{index}]", tree)
+                for index, value in enumerate(values)
+            ]
     return resolved_params
 
 
