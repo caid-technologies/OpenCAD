@@ -168,8 +168,10 @@ class RuntimeContext:
     def _sync_cursors(self) -> None:
         self.last_feature_id = self.last_shape_id = None
         for node_id, node in self.tree.nodes.items():
+            # adopt_tree also accepts caller-owned external tree state. Preserve
+            # that cursor behavior; load/rebuild reject external replay separately.
             if (node.status == "built" and not node.suppressed and node.shape_id
-                    and self._has_shape(node.shape_id)):
+                    and (self._external_kernel is not None or self._has_shape(node.shape_id))):
                 self.last_feature_id, self.last_shape_id = node_id, node.shape_id
 
     def _has_shape(self, shape_id: str) -> bool:

@@ -185,3 +185,17 @@ def test_cursors_never_pair_failed_feature_with_another_features_shape():
     ctx.rebuild_tree()
     assert ctx.tree.nodes[part.feature_id].status == "failed"
     assert ctx.last_feature_id == built.feature_id and ctx.last_shape_id == built.shape_id
+
+
+def test_external_adoption_keeps_cursors_without_claiming_local_ownership():
+    client = Mock()
+    ctx = RuntimeContext(kernel_client=client)
+    tree = _tree()
+    ctx.adopt_tree(tree)
+    assert ctx.last_feature_id == "moved"
+    assert ctx.last_shape_id == "translate-0003"
+    assert ctx.kernel.store.all_ids() == []
+    assert not ctx._has_shape(ctx.last_shape_id)
+    with pytest.raises(NotImplementedError, match="owning in-process kernel"):
+        ctx.rebuild_tree()
+    client.call_operation.assert_not_called()
