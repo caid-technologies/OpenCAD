@@ -83,3 +83,11 @@ still stores concrete edge IDs. This fix does not add persistent topological
 naming, automatic selection re-resolution after replacing upstream geometry,
 or cold project rehydration. Those capabilities must not be inferred from a
 passing top-selector test.
+
+After installing the environment in [OCCT_TESTING.md](OCCT_TESTING.md), run
+these focused checks from the repository root:
+
+```bash
+python scripts/test_occt.py --strict-regressions -k test_top_
+python -m pytest packages/opencad/tests/runtime/test_edge_selection.py
+```
