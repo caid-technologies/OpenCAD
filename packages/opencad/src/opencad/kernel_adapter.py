@@ -6,7 +6,10 @@ from opencad.kernel.client import result_to_dict
 from opencad.kernel.operations.registry import OperationRegistry
 from opencad.tree.models import FeatureNode, FeatureTree
 
-_REFERENCE_KEYS = ("shape_id", "shape_a_id", "shape_b_id", "base_id", "tool_id", "sketch_id")
+_REFERENCE_KEYS = (
+    "shape_id", "shape_a_id", "shape_b_id", "base_id", "tool_id", "sketch_id",
+    "profile_id", "path_id",
+)
 
 
 def normalize_feature_operation(operation: str, params: dict[str, Any]) -> tuple[str, dict[str, Any]]:
@@ -39,14 +42,25 @@ def normalize_feature_operation(operation: str, params: dict[str, Any]) -> tuple
 
 
 def resolve_feature_references(params: dict[str, Any], tree: FeatureTree) -> dict[str, Any]:
-    """Resolve feature-node references in params to concrete shape IDs when available."""
+    """Resolve scalar feature references without rewriting the saved parameters.
+
+    A known feature must be built, unsuppressed, and have a shape ID. A stale
+    feature may still carry a formerly valid ID in imported/edited trees; never
+    pass that cached geometry to the kernel. Literal native IDs that are not
+    tree keys remain supported and are validated by the owning kernel.
+    """
     resolved_params = dict(params)
     for key in _REFERENCE_KEYS:
         value = resolved_params.get(key)
         if isinstance(value, str) and value in tree.nodes:
-            resolved = tree.nodes[value].shape_id
-            if resolved:
-                resolved_params[key] = resolved
+            source = tree.nodes[value]
+            if source.suppressed or source.status != "built" or not source.shape_id:
+                raise ValueError(
+                    f"Cannot resolve '{key}' reference to feature '{value}': "
+                    f"status='{source.status}', suppressed={source.suppressed}; "
+                    "a built, unsuppressed feature with a shape_id is required."
+                )
+            resolved_params[key] = source.shape_id
     return resolved_params
 
 

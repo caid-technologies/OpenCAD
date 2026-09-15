@@ -1,4 +1,4 @@
-"""Audit regressions: draft/top selection repaired; three known cases remain.
+"""Audit regressions: draft/top/sweep repaired; two known cases remain.
 
 Each xfail is strict: a repaired feature produces XPASS and fails until the
 marker is removed. --strict-regressions runs all of these as ordinary failures.
@@ -60,7 +60,8 @@ def test_profile_references_survive_rebuild(request, context, backend, operation
     segments[0]["radius"] = 3
     context.tree = FeatureTreeService.edit_feature(context.tree, first.feature_id, {"segments": segments})
     rebuilt = context.rebuild_tree().nodes[part.feature_id]
-    _known_defect(request, f"OCCT-003-{operation}: profile/path references are not resolved on rebuild")
+    if operation == "loft":
+        _known_defect(request, "OCCT-003-loft: profile list references are not resolved on rebuild")
     assert rebuilt.status == "built", f"{operation} rebuild status: {rebuilt.status}"
     native = backend.get_native_shape(rebuilt.shape_id)
     assert native is not None
