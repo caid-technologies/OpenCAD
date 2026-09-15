@@ -99,3 +99,15 @@ def test_negative_duration_count_is_invalid():
     with pytest.raises(SystemExit) as error:
         runner.main(["--durations", "-1"])
     assert error.value.code == 2
+
+
+def test_native_capture_and_exit_status_are_preserved(monkeypatch, capsys):
+    monkeypatch.setattr(runner, "native_preflight", lambda: None)
+    def invoke(args, plugins):
+        assert "--capture=sys" in args
+        plugins[0].calls = 3
+        return pytest.ExitCode.INTERNAL_ERROR
+    monkeypatch.setattr(runner.pytest, "main", invoke)
+    assert runner.main([]) == pytest.ExitCode.INTERNAL_ERROR
+    output = capsys.readouterr().out
+    assert "OCCT pytest exit=3; test bodies=3" in output

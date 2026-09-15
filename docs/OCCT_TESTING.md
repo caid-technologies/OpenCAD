@@ -15,12 +15,15 @@ editable core and the native extra (no agent, web server, renderer, or LLM):
 ```bash
 uv venv --python 3.11
 uv pip install --python .venv -e "./packages/opencad[occt]" "pytest>=8,<10"
-uv run --no-project --no-sync --python .venv python scripts/test_occt.py --smoke
-uv run --no-project --no-sync --python .venv python scripts/test_occt.py --junitxml=test-results/occt.xml
+uv run --no-project --python .venv python scripts/test_occt.py --smoke
+uv run --no-project --python .venv python scripts/test_occt.py --junitxml=test-results/occt.xml
 ```
 
 Alternatively activate `.venv` and use `python scripts/test_occt.py` directly.
-The workflow uses the setup-python interpreter on disposable runners.
+The workflow creates a dedicated `.venv-occt` with Python 3.11 on disposable
+runners. This keeps dependencies out of the runner's system environment and
+avoids cross-drive cache-to-environment copies on Windows hosts whose Python
+installation is on C: but whose workspace/cache are on D:.
 
 The smoke suite checks native primitive volumes, translation, partially
 overlapping booleans, and invalid-input state preservation. The full suite
@@ -50,6 +53,12 @@ JUnit reports, slow-test timings, and resolved dependency versions are kept as
 CI artifacts. Dependency resolution follows the package's supported ranges;
 this is not a fully locked dependency job. The captured environment identifies
 what was actually tested.
+
+The native runner uses `--capture=sys`: Python output is captured, while C/C++
+diagnostics stream directly to CI instead of redirecting native file handles.
+It also prints pytest's returned exit code and coverage counts. That code is
+preserved; a failed process must never be overridden just because its printed
+assertion summary looks successful.
 
 ## Known defects are visible debt
 
