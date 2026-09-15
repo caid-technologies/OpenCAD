@@ -1,0 +1,59 @@
+name: OCCT Native
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: occt-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native:
+    name: OCCT (${{ matrix.os }}, Python 3.11)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      OPENCAD_KERNEL_BACKEND: occt
+      OPENCAD_SOLVER_BACKEND: python
+      PYTHONHASHSEED: "0"
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: packages/opencad/pyproject.toml
+      # Deliberately install only the editable core + native extra, not the
+      # workspace's agent/backend/rendering stacks. Existing CI covers those.
+      - name: Install native core test environment
+        run: uv pip install --system -e "./packages/opencad[occt]" "pytest>=8,<10"
+      - name: Record resolved dependencies
+        run: |
+          python -c "from pathlib import Path; Path('test-results').mkdir(exist_ok=True)"
+          uv pip freeze --system > test-results/environment.txt
+      - name: Test the no-skip gate
+        run: python -m pytest scripts/tests/test_occt_runner.py --junitxml=test-results/gate.xml
+      - name: Run native geometry and lifecycle tests
+        run: python scripts/test_occt.py --junitxml=test-results/occt.xml
+      - name: Upload test reports and environment
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: occt-${{ matrix.os }}-python311
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 14
