@@ -4,18 +4,36 @@ on:
     branches: [fix/occt-107-geometric-top-edges]
     paths: [.github/workflows/occt-107-workspace.yml]
 permissions:
-  contents: read
+  contents: write
 jobs:
-  source:
+  apply:
+    if: github.ref == 'refs/heads/fix/occt-107-geometric-top-edges'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
-      - run: git archive --format=zip HEAD -o opencad-source.zip
-      - uses: actions/upload-artifact@v4
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
         with:
-          name: occt-107-source
-          path: opencad-source.zip
-          retention-days: 1
+          python-version: '3.11'
+      - uses: astral-sh/setup-uv@v5
+      - name: Apply exact locally tested source and remove development transport
+        run: python .apply_occt107.py
+      - name: Verify native behavior and analytic refusal
+        env:
+          OPENCAD_KERNEL_BACKEND: occt
+          OPENCAD_SOLVER_BACKEND: python
+        run: |
+          uv venv --python 3.11 .venv-occt
+          uv pip install --python .venv-occt -c scripts/occt-constraints.txt -e './packages/opencad[occt]' 'pytest>=8,<10'
+          uv run --no-project --python .venv-occt python scripts/test_occt.py
+          uv run --no-project --python .venv-occt python -m pytest packages/opencad/tests/runtime/test_edge_selection.py
+          git diff --check
+      - name: Publish verified fix to this branch only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -u
+          git commit -m 'fix: select native top edges by whole-edge geometry (#107)'
+          git push origin HEAD:refs/heads/fix/occt-107-geometric-top-edges
