@@ -13,7 +13,9 @@ def test_fluent_sketch_extrude_fillet_rejects_analytic_step_export(tmp_path: Pat
     reset_default_context()
 
     sketch = Sketch().rect(10, 20).circle(3, subtract=True)
-    part = Part().extrude(sketch, depth=5).fillet(edges="top", radius=0.5)
+    # This tests analytic STEP rejection, not geometric edge selection. The
+    # analytic backend cannot certify a top rim; that is covered by native tests.
+    part = Part().extrude(sketch, depth=5).fillet(edges="all", radius=0.5)
 
     output = tmp_path / "output.step"
     with pytest.raises(RuntimeError, match="analytic backend cannot export STEP"):

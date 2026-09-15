@@ -245,12 +245,26 @@ class Part:
         if edge_spec in (None, "all"):
             return [edge.id for edge in topology.edges]
         if edge_spec == "top":
-            # Analytic topology does not carry directional tags on edges yet;
-            # returning a deterministic subset keeps API ergonomic.
-            return [edge.id for edge in topology.edges[:4]]
+            # The owning backend certifies whole-edge geometry. Consume its
+            # serialized tags so remote kernels behave exactly like local ones.
+            edge_ids = [edge.id for edge in topology.edges if "top" in edge.tags]
+            if not edge_ids:
+                raise ValueError(
+                    "No geometric top edges were reported for this shape. "
+                    "'top' requires non-degenerate edges lying wholly in its "
+                    "highest world-Z plane. Use an OCCT-backed context or "
+                    "explicit edge IDs instead."
+                )
+            return edge_ids
         raise ValueError(f"Unsupported edge selector '{edge_spec}'.")
 
     def fillet(self, *, edges: list[str] | str | None = None, radius: float, name: str = "Fillet") -> Self:
+        """Finish selected edges; ``top`` uses the native whole-edge world-Z tag.
+
+        ``None``/``all`` and explicit ID lists keep their existing behavior.
+        ``top`` raises ValueError when no geometric upper edge is reported,
+        including analytic-only contexts. See ``docs/EDGE_SELECTION.md``.
+        """
         feature_id, shape_id = self._require_shape()
         edge_ids = self._resolve_edge_ids(edges)
         return self._apply(
@@ -262,6 +276,12 @@ class Part:
         )
 
     def chamfer(self, *, edges: list[str] | str | None = None, distance: float, name: str = "Chamfer") -> Self:
+        """Finish selected edges; ``top`` uses the native whole-edge world-Z tag.
+
+        ``None``/``all`` and explicit ID lists keep their existing behavior.
+        ``top`` raises ValueError when no geometric upper edge is reported,
+        including analytic-only contexts. See ``docs/EDGE_SELECTION.md``.
+        """
         feature_id, shape_id = self._require_shape()
         edge_ids = self._resolve_edge_ids(edges)
         return self._apply(
