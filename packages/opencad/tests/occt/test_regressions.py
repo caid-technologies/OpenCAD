@@ -1,4 +1,4 @@
-"""Audit regressions: draft is repaired; four other cases remain known defects.
+"""Audit regressions: draft/top selection repaired; three known cases remain.
 
 Each xfail is strict: a repaired feature produces XPASS and fails until the
 marker is removed. --strict-regressions runs all of these as ordinary failures.
@@ -30,7 +30,7 @@ def test_draft_uses_a_neutral_plane(registry, backend, assert_solid):
         assert max(rim) == pytest.approx(5 - z * slope, abs=1e-6)
 
 
-def test_top_selector_is_geometric(request, context, backend):
+def test_top_selector_is_geometric(context, backend):
     from opencad import Part
 
     part = Part(context=context).box(10, 10, 10)
@@ -38,7 +38,6 @@ def test_top_selector_is_geometric(request, context, backend):
     expected = {edge.id for edge in topology.edges if abs(edge.centroid[2] - 5) < 1e-6}
     assert len(expected) == 4, "control geometry must have four top edges"
     selected = set(part._resolve_edge_ids("top"))
-    _known_defect(request, "OCCT-002: top selector returns the first four enumerated edges")
     assert selected == expected
 
 

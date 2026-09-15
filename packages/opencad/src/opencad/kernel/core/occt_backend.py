@@ -453,8 +453,18 @@ def _edge_length(edge: Any) -> float:
     return abs(props.Mass())
 
 
-def _build_topology_map(shape: Any, shape_id: str) -> TopologyMap:
-    """Build a full TopologyMap from a native OCCT shape."""
+def _build_topology_map(shape: Any, shape_id: str, *, tolerance: float = 1e-6) -> TopologyMap:
+    """Build native topology, including whole-edge world-Z ``top`` tags.
+
+    Use geometric bounds, not cached triangulations or edge enumeration. A
+    midpoint/centroid alone cannot prove that an entire curved edge is at the
+    top. AddOptimal without shape-tolerance inflation uses OCCT's geometric
+    confusion tolerance (1e-7), which is also the minimum comparison tolerance.
+    """
+    tolerance = max(tolerance, 1e-7)
+    bounds = Bnd_Box()
+    BRepBndLib.AddOptimal_s(shape, bounds, False, False)
+    top_z = None if bounds.IsVoid() else bounds.Get()[5]
     face_refs: list[SubshapeRef] = []
     explorer = TopExp_Explorer(shape, TopAbs_FACE)
     idx = 0
@@ -480,13 +490,29 @@ def _build_topology_map(shape: Any, shape_id: str) -> TopologyMap:
     for idx, edge in enumerate(_edges_from_shape(shape)):
         centroid = _edge_centroid(edge)
         length = _edge_length(edge)
+        tags: list[str] = []
+        # The centroid is only a cheap prefilter; the bounds check below is
+        # authoritative. Ignore zero-length pole edges and vertical seams.
+        if (
+            top_z is not None
+            and math.isfinite(top_z)
+            and length > tolerance
+            and not BRep_Tool.Degenerated_s(edge)
+            and abs(centroid[2] - top_z) <= tolerance
+        ):
+            edge_bounds = Bnd_Box()
+            BRepBndLib.AddOptimal_s(edge, edge_bounds, False, False)
+            if not edge_bounds.IsVoid():
+                _, _, zmin, _, _, zmax = edge_bounds.Get()
+                if abs(zmin - top_z) <= tolerance and abs(zmax - top_z) <= tolerance:
+                    tags.append("top")
         edge_refs.append(SubshapeRef(
             id=f"{shape_id}:edge:{idx}",
             kind=SubshapeKind.EDGE,
             index=idx,
             centroid=centroid,
             length=length,
-            tags=[],
+            tags=tags,
         ))
 
     return TopologyMap(shape_id=shape_id, faces=face_refs, edges=edge_refs)
@@ -1813,4 +1839,4 @@ class OcctBackend:
         native = self._get_native(shape_id)
         if native is None:
             raise ValueError(f"Shape '{shape_id}' not found.")
-        return _build_topology_map(native, shape_id)
+        return _build_topology_map(native, shape_id, tolerance=self.tolerance)
