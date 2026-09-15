@@ -106,18 +106,15 @@ Sweep rebuilding (OCCT-003-sweep, #108) also passes normally; see
 [SWEEP_REBUILD.md](SWEEP_REBUILD.md) for scalar references and edit/rebuild coverage.
 Loft rebuilding (OCCT-003-loft, #109) now passes normally; see
 [LOFT_REBUILD.md](LOFT_REBUILD.md) for ordered section references and native coverage.
-Only cold reload still carries a strict expected-failure mark.
+Cold reload (OCCT-004, #110) also passes normally; see
+[COLD_RELOAD.md](COLD_RELOAD.md) for session-aware reconstruction, replay identities,
+errors, branch handling, and a tested reload/edit/export example.
 
-| ID | Desired behavior | Existing defect |
-| --- | --- | --- |
-| OCCT-004 (#110) | Reloaded tree creates real geometry in an empty kernel | Saved `built` nodes are skipped during rebuild |
-
-The cold-reload case is a test, **not a fix**. Default CI reports it as XFAIL and prints an
-explicit known-defect summary. Setup/control assertions run before applying the
-expected-failure mark. Unexpected errors and strict XPASS results fail the run.
-After repairing an operation, remove its mark; do not weaken the assertion.
-`--strict-regressions` passes `--runxfail` and makes cold reload an ordinary blocker.
-No claim of full operation correctness should be based on a run with XFAILs.
+All five original audit cases are ordinary passing regressions. No expected-
+failure markers remain in that module. `--strict-regressions` remains available
+and passes `--runxfail`, so any subsequently added expected failures can be
+examined as ordinary failures. A green run certifies only its covered cases,
+not every CAD operation, supported platform, or third-party dependency version.
 
 ## Performance and isolation
 

@@ -36,6 +36,9 @@ class FeatureNode(BaseModel):
     depends_on: list[str] = Field(default_factory=list)
     shape_id: str | None = None
     status: NodeStatus = "pending"
+    # An unmaterialized saved result's identity, consumed only by cold replay.
+    replay_shape_id: str | None = None
+    rebuild_error: str | None = None
     suppressed: bool = False
     mate_id: str | None = None
     is_assembly_mate: bool = False
@@ -100,6 +103,8 @@ class FeatureTree(BaseModel):
     branch_snapshots: dict[str, dict[str, FeatureNode]] = Field(default_factory=dict)
     solver_cache: dict[str, dict[str, Any]] = Field(default_factory=dict)
     revision: int = 0
+    # Cache provenance, not a durable native artifact or an authorization token.
+    kernel_session_id: str | None = None
 
 
 class RebuildRequest(BaseModel):

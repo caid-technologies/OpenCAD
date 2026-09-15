@@ -134,6 +134,7 @@ class FeatureTreeService:
         updated = deepcopy(tree)
         node = updated.nodes[node_id]
         node.parameters = {**node.parameters, **new_params}
+        node.rebuild_error = None
         node.status = "stale"
         node.shape_id = None
         updated.nodes[node_id] = node
@@ -359,6 +360,7 @@ class FeatureTreeService:
             node = updated.nodes[node_id]
 
             if node.suppressed:
+                node.rebuild_error = None
                 node.status = "suppressed"
                 node.shape_id = None
                 updated.nodes[node_id] = node
@@ -367,6 +369,8 @@ class FeatureTreeService:
             # If a parent failed, this branch cannot build.
             parent_blocked = any(updated.nodes[parent].status != "built" for parent in node.depends_on)
             if parent_blocked:
+                blocked = [parent for parent in node.depends_on if updated.nodes[parent].status != "built"]
+                node.rebuild_error = f"Blocked by unavailable dependencies: {', '.join(blocked)}"
                 node.status = "stale"
                 node.shape_id = None
                 updated.nodes[node_id] = node
@@ -385,15 +389,19 @@ class FeatureTreeService:
                 node.shape_id = shape_id
                 node.parameters = runtime_node.parameters
                 node.status = "built"
+                node.replay_shape_id = None
+                node.rebuild_error = None
                 updated.nodes[node_id] = node
-            except Exception:
+            except Exception as exc:
                 node.status = "failed"
+                node.rebuild_error = str(exc)
                 node.shape_id = None
                 updated.nodes[node_id] = node
 
                 for child_id in descendants(updated.nodes, node_id):
                     child = updated.nodes[child_id]
-                    child.status = "stale"
+                    child.status = "suppressed" if child.suppressed else "stale"
+                    child.rebuild_error = None if child.suppressed else f"Blocked by failed feature '{node_id}'"
                     child.shape_id = None
                     updated.nodes[child_id] = child
 
