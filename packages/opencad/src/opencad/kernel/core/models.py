@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, FiniteFloat, model_validator
 
 from .errors import Failure
 
@@ -134,8 +134,8 @@ class JointUnit(str, Enum):
 class RigidTransform(BaseModel):
     """Renderer-ready rigid transform in OpenCAD's native Z-up coordinates."""
 
-    translation_mm: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    rotation_quaternion_xyzw: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
+    translation_mm: tuple[FiniteFloat, FiniteFloat, FiniteFloat] = (0.0, 0.0, 0.0)
+    rotation_quaternion_xyzw: tuple[FiniteFloat, FiniteFloat, FiniteFloat, FiniteFloat] = (0.0, 0.0, 0.0, 1.0)
 
     @classmethod
     def identity(cls) -> "RigidTransform":
@@ -150,14 +150,14 @@ class KinematicJoint(BaseModel):
     layer can replace them without changing pose evaluation.
     """
 
-    id: str
+    id: str = Field(min_length=1)
     type: KinematicJointType
-    parent_shape_id: str
-    child_shape_id: str
-    axis: tuple[float, float, float] = (0.0, 0.0, 1.0)
-    origin_mm: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    lower_limit: float = 0.0
-    upper_limit: float = 0.0
+    parent_shape_id: str = Field(min_length=1)
+    child_shape_id: str = Field(min_length=1)
+    axis: tuple[FiniteFloat, FiniteFloat, FiniteFloat] = (0.0, 0.0, 1.0)
+    origin_mm: tuple[FiniteFloat, FiniteFloat, FiniteFloat] = (0.0, 0.0, 0.0)
+    lower_limit: FiniteFloat = 0.0
+    upper_limit: FiniteFloat = 0.0
     unit: JointUnit = JointUnit.NONE
     label: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
