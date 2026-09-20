@@ -9,25 +9,28 @@ from __future__ import annotations
 
 from typing import Any
 
+from opencad.kinematics import evaluate_assembly_pose, evaluate_joint_pose
 from opencad.kernel.core.analytic_backend import AnalyticBackend
 from opencad.kernel.core.backend import KernelBackend
 from opencad.kernel.core.errors import ErrorCode, make_failure
 from opencad.kernel.core.models import (
     AssemblyMate,
     AssemblyMateStatus,
+    KinematicJoint,
     MeshData,
     OperationResult,
     ShapeData,
     Success,
     TopologyMap,
 )
-from opencad.kernel.core.store import IdStrategy, MateStore
+from opencad.kernel.core.store import IdStrategy, JointStore, MateStore
 from opencad.kernel.core.topology import select as topo_select
 from opencad.kernel.operations.schemas import (
     BooleanInput,
     ChamferEdgesInput,
     CircularPatternInput,
     CreateAssemblyMateInput,
+    CreateKinematicJointInput,
     CreateBoxInput,
     CreateConeInput,
     CreateCylinderInput,
@@ -35,6 +38,7 @@ from opencad.kernel.operations.schemas import (
     CreateSphereInput,
     CreateTorusInput,
     DeleteAssemblyMateInput,
+    DeleteKinematicJointInput,
     DraftInput,
     ExportStlInput,
     ExportStepInput,
@@ -42,8 +46,11 @@ from opencad.kernel.operations.schemas import (
     FilletEdgesInput,
     ImportStepInput,
     ImportStlInput,
+    EvaluateKinematicAssemblyInput,
+    EvaluateKinematicJointInput,
     LinearPatternInput,
     ListAssemblyMatesInput,
+    ListKinematicJointsInput,
     LoftInput,
     MirrorInput,
     OffsetShapeInput,
@@ -79,6 +86,7 @@ class OpenCadKernel:
         )
         self.store = self._backend.store
         self.mate_store = MateStore(id_strategy=id_strategy)
+        self.joint_store = JointStore(id_strategy=id_strategy)
 
     @property
     def backend(self) -> KernelBackend:
@@ -242,6 +250,164 @@ class OpenCadKernel:
                 "mate_id": mate.id,
                 "mate": mate.model_dump(),
             },
+        )
+
+
+    # Rigid kinematic joints are intentionally separate from assembly mates:
+    # mates constrain geometry; joints define allowed degrees of freedom.
+
+    def _would_create_joint_cycle(self, parent_shape_id: str, child_shape_id: str) -> bool:
+        cursor = parent_shape_id
+        visited: set[str] = set()
+        while cursor not in visited:
+            if cursor == child_shape_id:
+                return True
+            visited.add(cursor)
+            parent_joint = self.joint_store.by_child(cursor)
+            if parent_joint is None:
+                return False
+            cursor = parent_joint.parent_shape_id
+        return True
+
+    def create_kinematic_joint(self, payload: CreateKinematicJointInput) -> OperationResult:
+        parent = self.store.get(payload.parent_shape_id)
+        child = self.store.get(payload.child_shape_id)
+        if parent is None:
+            return make_failure(
+                code=ErrorCode.JOINT_INVALID_REFERENCE,
+                message=f"Parent shape '{payload.parent_shape_id}' was not found.",
+                suggestion="Create or import the parent shape before creating the joint.",
+                failed_check="joint_parent_lookup",
+            )
+        if child is None:
+            return make_failure(
+                code=ErrorCode.JOINT_INVALID_REFERENCE,
+                message=f"Child shape '{payload.child_shape_id}' was not found.",
+                suggestion="Create or import the child shape before creating the joint.",
+                failed_check="joint_child_lookup",
+            )
+
+        existing_parent = self.joint_store.by_child(payload.child_shape_id)
+        if existing_parent is not None:
+            return make_failure(
+                code=ErrorCode.JOINT_DUPLICATE_CHILD,
+                message=(
+                    f"Shape '{payload.child_shape_id}' already has parent joint "
+                    f"'{existing_parent.id}'."
+                ),
+                suggestion="Delete the existing parent joint before re-parenting the shape.",
+                failed_check="joint_single_parent",
+            )
+
+        if self._would_create_joint_cycle(payload.parent_shape_id, payload.child_shape_id):
+            return make_failure(
+                code=ErrorCode.JOINT_CYCLE,
+                message="The requested kinematic joint would create a cycle.",
+                suggestion="Use an acyclic parent/child joint tree.",
+                failed_check="joint_cycle",
+            )
+
+        if payload.joint_id and self.joint_store.get(payload.joint_id) is not None:
+            return self._invalid_input(
+                f"Kinematic joint id '{payload.joint_id}' already exists."
+            )
+
+        joint = KinematicJoint(
+            id=payload.joint_id or self.joint_store.new_id(),
+            type=payload.type,
+            parent_shape_id=payload.parent_shape_id,
+            child_shape_id=payload.child_shape_id,
+            axis=tuple(payload.axis),
+            origin_mm=tuple(payload.origin_mm),
+            lower_limit=float(payload.lower_limit),
+            upper_limit=float(payload.upper_limit),
+            label=payload.label,
+            metadata=dict(payload.metadata),
+        )
+        self.joint_store.add(joint)
+        return Success(
+            metadata={
+                "operation": "create_kinematic_joint",
+                "joint_id": joint.id,
+                "joint": joint.model_dump(mode="json"),
+            }
+        )
+
+    def delete_kinematic_joint(self, payload: DeleteKinematicJointInput) -> OperationResult:
+        if not self.joint_store.delete(payload.joint_id):
+            return make_failure(
+                code=ErrorCode.JOINT_NOT_FOUND,
+                message=f"Kinematic joint '{payload.joint_id}' was not found.",
+                suggestion="Use a joint_id returned by create/list kinematic joints.",
+                failed_check="joint_lookup",
+            )
+        return Success(
+            metadata={
+                "operation": "delete_kinematic_joint",
+                "joint_id": payload.joint_id,
+            }
+        )
+
+    def list_kinematic_joints(self, payload: ListKinematicJointsInput) -> OperationResult:
+        joints = (
+            self.joint_store.by_shape(payload.shape_id)
+            if payload.shape_id
+            else self.joint_store.all()
+        )
+        return Success(
+            metadata={
+                "operation": "list_kinematic_joints",
+                "joints": [joint.model_dump(mode="json") for joint in joints],
+            }
+        )
+
+    def evaluate_kinematic_joint(self, payload: EvaluateKinematicJointInput) -> OperationResult:
+        joint = self.joint_store.get(payload.joint_id)
+        if joint is None:
+            return make_failure(
+                code=ErrorCode.JOINT_NOT_FOUND,
+                message=f"Kinematic joint '{payload.joint_id}' was not found.",
+                suggestion="Use a valid joint_id from list_kinematic_joints.",
+                failed_check="joint_lookup",
+            )
+        pose = evaluate_joint_pose(joint, float(payload.progress))
+        return Success(
+            metadata={
+                "operation": "evaluate_kinematic_joint",
+                "pose": pose.model_dump(mode="json"),
+            }
+        )
+
+    def evaluate_kinematic_assembly(
+        self,
+        payload: EvaluateKinematicAssemblyInput,
+    ) -> OperationResult:
+        known = set(self.joint_store.all_ids())
+        unknown = sorted(set(payload.progress_by_joint) - known)
+        if unknown:
+            return self._invalid_input(
+                f"Unknown kinematic joint progress key(s): {', '.join(unknown)}."
+            )
+        try:
+            transforms = evaluate_assembly_pose(
+                self.joint_store.all(),
+                payload.progress_by_joint,
+            )
+        except ValueError as exc:
+            return make_failure(
+                code=ErrorCode.JOINT_CYCLE,
+                message=str(exc),
+                suggestion="Repair the kinematic joint tree before evaluating it.",
+                failed_check="joint_graph_evaluation",
+            )
+        return Success(
+            metadata={
+                "operation": "evaluate_kinematic_assembly",
+                "transforms": {
+                    shape_id: transform.model_dump(mode="json")
+                    for shape_id, transform in transforms.items()
+                },
+            }
         )
 
     def delete_assembly_mate(self, payload: DeleteAssemblyMateInput) -> OperationResult:

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Field, FiniteFloat, field_validator
+from opencad.kernel.core.models import KinematicJointType
+from pydantic import BaseModel, Field, FiniteFloat, field_validator, model_validator
 
 
 # ── Primitives ──────────────────────────────────────────────────────
@@ -247,6 +248,68 @@ class ListAssemblyMatesInput(BaseModel):
     """Optionally filter by entity involvement."""
 
     entity_ref: str | None = None
+
+
+# ── Rigid kinematic joints ─────────────────────────────────────────
+
+
+class CreateKinematicJointInput(BaseModel):
+    """Create one rigid DOF relationship between two shape occurrences.
+
+    Revolute limits are radians; prismatic limits are millimeters.
+    """
+
+    type: KinematicJointType
+    joint_id: str | None = Field(default=None, min_length=1)
+    parent_shape_id: str = Field(min_length=1)
+    child_shape_id: str = Field(min_length=1)
+    axis: tuple[FiniteFloat, FiniteFloat, FiniteFloat] = (0.0, 0.0, 1.0)
+    origin_mm: tuple[FiniteFloat, FiniteFloat, FiniteFloat] = (0.0, 0.0, 0.0)
+    lower_limit: FiniteFloat = 0.0
+    upper_limit: FiniteFloat = 0.0
+    label: str | None = None
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def valid_joint(self) -> "CreateKinematicJointInput":
+        if self.parent_shape_id == self.child_shape_id:
+            raise ValueError("Kinematic joint parent and child must be different shapes.")
+        if self.lower_limit > self.upper_limit:
+            raise ValueError("lower_limit must be <= upper_limit.")
+        if self.type != KinematicJointType.FIXED and not any(self.axis):
+            raise ValueError("Movable kinematic joints require a non-zero axis.")
+        if self.type == KinematicJointType.FIXED and (
+            self.lower_limit != 0.0 or self.upper_limit != 0.0
+        ):
+            raise ValueError("Fixed joints must use zero limits.")
+        return self
+
+
+class DeleteKinematicJointInput(BaseModel):
+    joint_id: str = Field(min_length=1)
+
+
+class ListKinematicJointsInput(BaseModel):
+    shape_id: str | None = None
+
+
+class EvaluateKinematicJointInput(BaseModel):
+    joint_id: str = Field(min_length=1)
+    progress: FiniteFloat = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class EvaluateKinematicAssemblyInput(BaseModel):
+    progress_by_joint: dict[str, FiniteFloat] = Field(default_factory=dict)
+
+    @field_validator("progress_by_joint")
+    @classmethod
+    def normalized_progress(cls, value: dict[str, float]) -> dict[str, float]:
+        for joint_id, progress in value.items():
+            if progress < 0.0 or progress > 1.0:
+                raise ValueError(
+                    f"Joint progress for '{joint_id}' must be between 0 and 1."
+                )
+        return value
 
 
 # ── Topology selectors ─────────────────────────────────────────────

@@ -455,6 +455,7 @@ class Part:
         *,
         artifact_id: str | None = None,
         parameters: dict[str, Any] | None = None,
+        kinematic_joints: list[dict[str, Any]] | None = None,
         simulation_tags: list[dict[str, Any]] | None = None,
     ) -> Self:
         self._require_shape()
@@ -462,6 +463,7 @@ class Part:
             filepath,
             artifact_id=artifact_id or self._name,
             parameters=parameters,
+            kinematic_joints=kinematic_joints,
             simulation_tags=simulation_tags,
         )
         return self

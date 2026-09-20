@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, FiniteFloat, model_validator
 
 from .errors import Failure
 
@@ -114,3 +114,83 @@ class AssemblyMate(BaseModel):
     entity_b: str
     value: float | None = None
     status: AssemblyMateStatus = AssemblyMateStatus.PENDING
+
+
+# ── Rigid kinematics ────────────────────────────────────────────────
+
+
+class KinematicJointType(str, Enum):
+    FIXED = "fixed"
+    REVOLUTE = "revolute"
+    PRISMATIC = "prismatic"
+
+
+class JointUnit(str, Enum):
+    NONE = "none"
+    RADIAN = "radian"
+    MILLIMETER = "mm"
+
+
+class RigidTransform(BaseModel):
+    """Renderer-ready rigid transform in OpenCAD's native Z-up coordinates."""
+
+    translation_mm: tuple[FiniteFloat, FiniteFloat, FiniteFloat] = (0.0, 0.0, 0.0)
+    rotation_quaternion_xyzw: tuple[FiniteFloat, FiniteFloat, FiniteFloat, FiniteFloat] = (0.0, 0.0, 0.0, 1.0)
+
+    @classmethod
+    def identity(cls) -> "RigidTransform":
+        return cls()
+
+
+class KinematicJoint(BaseModel):
+    """A rigid degree-of-freedom relationship between two shape occurrences.
+
+    Revolute limits are radians. Prismatic limits are millimeters. Shape IDs
+    act as occurrence IDs in this first contract; a future assembly-occurrence
+    layer can replace them without changing pose evaluation.
+    """
+
+    id: str = Field(min_length=1)
+    type: KinematicJointType
+    parent_shape_id: str = Field(min_length=1)
+    child_shape_id: str = Field(min_length=1)
+    axis: tuple[FiniteFloat, FiniteFloat, FiniteFloat] = (0.0, 0.0, 1.0)
+    origin_mm: tuple[FiniteFloat, FiniteFloat, FiniteFloat] = (0.0, 0.0, 0.0)
+    lower_limit: FiniteFloat = 0.0
+    upper_limit: FiniteFloat = 0.0
+    unit: JointUnit = JointUnit.NONE
+    label: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_joint(self) -> "KinematicJoint":
+        if self.parent_shape_id == self.child_shape_id:
+            raise ValueError("Kinematic joint parent and child must be different shapes.")
+        if self.lower_limit > self.upper_limit:
+            raise ValueError("Kinematic joint lower_limit must be <= upper_limit.")
+
+        axis_length_sq = sum(component * component for component in self.axis)
+        if self.type != KinematicJointType.FIXED and axis_length_sq <= 1e-24:
+            raise ValueError("Kinematic joint axis must be non-zero.")
+
+        expected_unit = {
+            KinematicJointType.FIXED: JointUnit.NONE,
+            KinematicJointType.REVOLUTE: JointUnit.RADIAN,
+            KinematicJointType.PRISMATIC: JointUnit.MILLIMETER,
+        }[self.type]
+        self.unit = expected_unit
+
+        if self.type == KinematicJointType.FIXED and (
+            self.lower_limit != 0.0 or self.upper_limit != 0.0
+        ):
+            raise ValueError("Fixed joints must use zero lower/upper limits.")
+        return self
+
+
+class JointPose(BaseModel):
+    joint_id: str
+    child_shape_id: str
+    progress: float
+    value: float
+    unit: JointUnit
+    transform: RigidTransform

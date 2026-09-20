@@ -2,7 +2,8 @@ import { GizmoHelper, GizmoViewport, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BufferAttribute, BufferGeometry, EdgesGeometry } from "three";
-import type { MeshPayload } from "../types";
+import type { MeshPayload, RigidTransform } from "../types";
+import { normalizeRigidTransform } from "../shapeTransforms";
 import type { MeshStreamChunk, OpenCadApiClient } from "../api/client";
 import { getMeshMaterialGroups } from "../meshHighlight";
 
@@ -10,6 +11,8 @@ interface Viewport3DProps {
   meshes: MeshPayload[];
   selectedShapeId?: string | null;
   highlightedShapeIds?: ReadonlySet<string>;
+  /** Renderer-ready world transforms keyed by shape ID. */
+  shapeTransforms?: Readonly<Record<string, RigidTransform>>;
   onSelectShape?: (shapeId: string) => void;
   /** Optional: provide the API client to enable SSE streaming. */
   apiClient?: OpenCadApiClient;
@@ -32,14 +35,17 @@ function MeshItem({
   mesh,
   selected,
   selectedOwnerShapeId,
+  transform,
   onSelect
 }: {
   mesh: MeshPayload;
   selected: boolean;
   selectedOwnerShapeId?: string | null;
+  transform?: RigidTransform;
   onSelect?: (shapeId: string) => void;
 }): JSX.Element {
   const [hovered, setHovered] = useState(false);
+  const rigidTransform = normalizeRigidTransform(transform);
   const geometry = useMemo(() => {
     const g = new BufferGeometry();
     const positions = toFloat32(mesh.vertices);
@@ -78,7 +84,10 @@ function MeshItem({
     && geometry.groups.some((group) => group.materialIndex === 0);
 
   return (
-    <group>
+    <group
+      position={rigidTransform.translation_mm}
+      quaternion={rigidTransform.rotation_quaternion_xyzw}
+    >
       <mesh
         geometry={geometry}
         onPointerOver={(event) => {
@@ -113,15 +122,18 @@ function StreamingMeshItem({
   apiClient,
   selected,
   selectedOwnerShapeId,
+  transform,
   onSelect,
 }: {
   shapeId: string;
   apiClient: OpenCadApiClient;
   selected: boolean;
   selectedOwnerShapeId?: string | null;
+  transform?: RigidTransform;
   onSelect?: (shapeId: string) => void;
 }): JSX.Element | null {
   const [hovered, setHovered] = useState(false);
+  const rigidTransform = normalizeRigidTransform(transform);
   const geometryRef = useRef<BufferGeometry | null>(null);
   const edgeGeomRef = useRef<EdgesGeometry | null>(null);
   const [, forceUpdate] = useState(0);
@@ -203,7 +215,10 @@ function StreamingMeshItem({
     && geometryRef.current.groups.some((group) => group.materialIndex === 0);
 
   return (
-    <group>
+    <group
+      position={rigidTransform.translation_mm}
+      quaternion={rigidTransform.rotation_quaternion_xyzw}
+    >
       <mesh
         geometry={geometryRef.current}
         onPointerOver={(event) => { event.stopPropagation(); setHovered(true); }}
@@ -222,7 +237,7 @@ function StreamingMeshItem({
   );
 }
 
-export function Viewport3D({ meshes, selectedShapeId, highlightedShapeIds, onSelectShape, apiClient, useStreaming }: Viewport3DProps): JSX.Element {
+export function Viewport3D({ meshes, selectedShapeId, highlightedShapeIds, shapeTransforms, onSelectShape, apiClient, useStreaming }: Viewport3DProps): JSX.Element {
   const isSelected = useCallback(
     (shapeId: string) => highlightedShapeIds?.has(shapeId) ?? shapeId === selectedShapeId,
     [highlightedShapeIds, selectedShapeId],
@@ -249,6 +264,7 @@ export function Viewport3D({ meshes, selectedShapeId, highlightedShapeIds, onSel
                 apiClient={apiClient}
                 selected={isSelected(id)}
                 selectedOwnerShapeId={selectedShapeId}
+                transform={shapeTransforms?.[id]}
                 onSelect={onSelectShape}
               />
             ))
@@ -258,6 +274,7 @@ export function Viewport3D({ meshes, selectedShapeId, highlightedShapeIds, onSel
                 mesh={mesh}
                 selected={isSelected(mesh.shapeId)}
                 selectedOwnerShapeId={selectedShapeId}
+                transform={shapeTransforms?.[mesh.shapeId]}
                 onSelect={onSelectShape}
               />
             ))}

@@ -26,6 +26,7 @@ export { projectFeatureTree } from "./featureTreeProjection";
 export type { FeatureTreeProjection, ToolBranchReference } from "./featureTreeProjection";
 export { getHighlightedViewportShapeIds, getViewportShapeIds } from "./featureVisibility";
 export { getMeshMaterialGroups } from "./meshHighlight";
+export { IDENTITY_RIGID_TRANSFORM, normalizeRigidTransform, transformsFromJointPoses } from "./shapeTransforms";
 export type { MeshMaterialGroup } from "./meshHighlight";
 export { sketchFromNode } from "./sketchData";
 
@@ -47,6 +48,11 @@ export type {
   FeatureNodeStatus,
   FeatureNodeView,
   FeatureTreeView,
+  CreateKinematicJointInput,
+  JointPose,
+  JointUnit,
+  KinematicJoint,
+  KinematicJointType,
   MeshFaceGroup,
   MeshPayload,
   ParameterBinding,
@@ -59,6 +65,7 @@ export type {
   SketchPayload,
   SketchPoint,
   SketchRectangle,
+  RigidTransform,
   SolverResult,
   TreeSnapshotPayload,
   TypedParameter,

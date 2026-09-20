@@ -21,6 +21,7 @@ Required top-level fields:
   "created_at": "2026-04-24T00:00:00Z",
   "feature_tree": {"root_id": "root", "nodes": {}},
   "parameters": {},
+  "kinematic_joints": [],
   "simulation_tags": []
 }
 ```
@@ -40,6 +41,36 @@ Each parameter is keyed by name and must contain a matching `name` and a `value`
   }
 }
 ```
+
+
+## Kinematic Joints
+
+OpenCAD owns rigid mechanism semantics. Optional `kinematic_joints` are stored
+with the design artifact so downstream tools can reproduce mechanism behavior
+without inventing a second joint schema.
+
+```json
+{
+  "id": "rear-cover-hinge",
+  "type": "revolute",
+  "parent_shape_id": "enclosure",
+  "child_shape_id": "rear-cover",
+  "axis": [0, 0, 1],
+  "origin_mm": [-44, 9.6, 0],
+  "lower_limit": 0,
+  "upper_limit": 1.8325957146,
+  "unit": "radian"
+}
+```
+
+Rigid joint types are `fixed`, `revolute`, and `prismatic`. Revolute
+limits are radians and prismatic limits are millimeters. Compliant/flexure
+deformation is intentionally not represented as a rigid joint; that requires a
+separate deformation/simulation contract.
+
+The kernel can evaluate a normalized joint progress (0–1) into a renderer-ready
+translation and XYZW quaternion. Assembly evaluation composes parent/child
+joints and returns world transforms keyed by child shape ID.
 
 ## Simulation Tags
 

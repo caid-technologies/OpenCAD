@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
+from opencad.kernel.core.models import KinematicJoint
 from opencad.version import __version__
 from opencad.tree.models import FeatureTree
 
@@ -59,6 +60,7 @@ class DesignArtifact(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     feature_tree: FeatureTree
     parameters: dict[str, DesignParameter] = Field(default_factory=dict)
+    kinematic_joints: list[KinematicJoint] = Field(default_factory=list)
     simulation_tags: list[SimulationTag] = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -80,12 +82,14 @@ def build_design_artifact(
     artifact_id: str,
     feature_tree: FeatureTree,
     parameters: dict[str, Any] | Iterable[DesignParameter | dict[str, Any]] | None = None,
+    kinematic_joints: Iterable[KinematicJoint | dict[str, Any]] | None = None,
     simulation_tags: Iterable[SimulationTag | dict[str, Any]] | None = None,
 ) -> DesignArtifact:
     return DesignArtifact(
         artifact_id=artifact_id,
         feature_tree=feature_tree,
         parameters=_parameter_map(parameters),
+        kinematic_joints=[KinematicJoint.model_validate(joint) for joint in kinematic_joints or []],
         simulation_tags=[SimulationTag.model_validate(tag) for tag in simulation_tags or []],
     )
 
@@ -96,6 +100,7 @@ def export_design_artifact(
     artifact_id: str,
     context: RuntimeContext | None = None,
     parameters: dict[str, Any] | Iterable[DesignParameter | dict[str, Any]] | None = None,
+    kinematic_joints: Iterable[KinematicJoint | dict[str, Any]] | None = None,
     simulation_tags: Iterable[SimulationTag | dict[str, Any]] | None = None,
 ) -> DesignArtifact:
     if context is None:
@@ -106,6 +111,7 @@ def export_design_artifact(
         artifact_id=artifact_id,
         feature_tree=context.tree,
         parameters=parameters,
+        kinematic_joints=kinematic_joints,
         simulation_tags=simulation_tags,
     )
     artifact.write_json(path)

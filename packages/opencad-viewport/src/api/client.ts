@@ -5,9 +5,13 @@ import type {
   ChatResponsePayload,
   CadFileFormat,
   CadImportResult,
+  CreateKinematicJointInput,
   FeatureTreeView,
+  JointPose,
+  KinematicJoint,
   MeshFaceGroup,
   MeshPayload,
+  RigidTransform,
   SketchPayload,
   SolverResult,
 } from "../types";
@@ -40,6 +44,66 @@ export class OpenCadApiClient {
     this.kernelUrl = kernelUrl ?? `${baseUrl}/kernel`;
     this.useMock = useMock;
     this.useChatMock = useChatMock;
+  }
+
+
+  async callKernelOperation<TMetadata>(
+    name: string,
+    payload: Record<string, unknown> = {},
+  ): Promise<TMetadata> {
+    const response = await axios.post<{
+      ok: boolean;
+      metadata?: TMetadata;
+      message?: string;
+    }>(`${this.kernelUrl}/operations/${encodeURIComponent(name)}`, { payload });
+
+    if (!response.data.ok || response.data.metadata === undefined) {
+      throw new Error(response.data.message || `OpenCAD kernel operation '${name}' failed.`);
+    }
+    return response.data.metadata;
+  }
+
+  async createKinematicJoint(input: CreateKinematicJointInput): Promise<KinematicJoint> {
+    const metadata = await this.callKernelOperation<{ joint: KinematicJoint }>(
+      "create_kinematic_joint",
+      input as unknown as Record<string, unknown>,
+    );
+    return metadata.joint;
+  }
+
+  async deleteKinematicJoint(jointId: string): Promise<void> {
+    await this.callKernelOperation(
+      "delete_kinematic_joint",
+      { joint_id: jointId },
+    );
+  }
+
+  async listKinematicJoints(shapeId?: string): Promise<KinematicJoint[]> {
+    const metadata = await this.callKernelOperation<{ joints: KinematicJoint[] }>(
+      "list_kinematic_joints",
+      shapeId ? { shape_id: shapeId } : {},
+    );
+    return metadata.joints;
+  }
+
+  async evaluateKinematicJoint(jointId: string, progress: number): Promise<JointPose> {
+    const metadata = await this.callKernelOperation<{ pose: JointPose }>(
+      "evaluate_kinematic_joint",
+      { joint_id: jointId, progress },
+    );
+    return metadata.pose;
+  }
+
+  async evaluateKinematicAssembly(
+    progressByJoint: Record<string, number> = {},
+  ): Promise<Record<string, RigidTransform>> {
+    const metadata = await this.callKernelOperation<{
+      transforms: Record<string, RigidTransform>;
+    }>(
+      "evaluate_kinematic_assembly",
+      { progress_by_joint: progressByJoint },
+    );
+    return metadata.transforms;
   }
 
   async solveSketch(sketch: SketchPayload): Promise<SolverResult> {

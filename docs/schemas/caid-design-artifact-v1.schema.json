@@ -22,7 +22,10 @@
           "type": "string"
         }
       },
-      "required": ["root_id", "nodes"],
+      "required": [
+        "root_id",
+        "nodes"
+      ],
       "type": "object"
     },
     "parameters": {
@@ -45,7 +48,10 @@
           "type": "string"
         }
       },
-      "required": ["name", "version"],
+      "required": [
+        "name",
+        "version"
+      ],
       "type": "object"
     },
     "schema_version": {
@@ -56,6 +62,12 @@
         "$ref": "#/$defs/simulation_tag"
       },
       "type": "array"
+    },
+    "kinematic_joints": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/kinematic_joint"
+      }
     }
   },
   "required": [
@@ -74,38 +86,64 @@
       "additionalProperties": false,
       "properties": {
         "feature_id": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "name": {
           "minLength": 1,
           "type": "string"
         },
         "role": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "unit": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "value": {
           "$ref": "#/$defs/parameter_value"
         }
       },
-      "required": ["name", "value"],
+      "required": [
+        "name",
+        "value"
+      ],
       "type": "object"
     },
     "parameter_value": {
       "anyOf": [
-        {"type": "boolean"},
-        {"type": "integer"},
-        {"type": "number"},
-        {"type": "string"}
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
       ]
     },
     "simulation_tag": {
       "additionalProperties": false,
       "properties": {
         "kind": {
-          "enum": ["body", "joint", "geom", "site", "parameter"]
+          "enum": [
+            "body",
+            "joint",
+            "geom",
+            "site",
+            "parameter"
+          ]
         },
         "metadata": {
           "type": "object"
@@ -119,8 +157,86 @@
           "type": "string"
         }
       },
-      "required": ["name", "kind", "target"],
+      "required": [
+        "name",
+        "kind",
+        "target"
+      ],
       "type": "object"
+    },
+    "kinematic_joint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "fixed",
+            "revolute",
+            "prismatic"
+          ]
+        },
+        "parent_shape_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "child_shape_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "axis": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "origin_mm": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "lower_limit": {
+          "type": "number"
+        },
+        "upper_limit": {
+          "type": "number"
+        },
+        "unit": {
+          "enum": [
+            "none",
+            "radian",
+            "mm"
+          ]
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "parent_shape_id",
+        "child_shape_id",
+        "axis",
+        "origin_mm",
+        "lower_limit",
+        "upper_limit",
+        "unit"
+      ]
     }
   }
 }

@@ -33,6 +33,7 @@ kernel/solver/tree design and `TOPOLOGY.md` for topological naming.
 | `opencad.kernel` | B-rep operations, OCCT and analytic backends, `KernelClient` |
 | `opencad.solver` | 2-D constraint solving (NumPy/SciPy and SolveSpace backends) |
 | `opencad.tree` | Feature DAG, incremental rebuild, branching, expressions |
+| `opencad.kinematics` | Rigid fixed/revolute/prismatic joints and assembly pose evaluation |
 
 ## Related distributions
 

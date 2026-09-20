@@ -60,6 +60,10 @@ def test_committed_json_schemas_expose_required_contract_keys(repo_root: Path) -
     assert set(patch_schema["required"]) == PATCH_REQUIRED_KEYS
     assert artifact_schema["properties"]["schema_version"]["const"] == 1
     assert patch_schema["properties"]["schema_version"]["const"] == 1
+    assert "kinematic_joints" in artifact_schema["properties"]
+    assert artifact_schema["$defs"]["kinematic_joint"]["properties"]["type"]["enum"] == [
+        "fixed", "revolute", "prismatic"
+    ]
     assert "anyOf" in artifact_schema["$defs"]["parameter_value"]
     assert "oneOf" not in artifact_schema["$defs"]["parameter_value"]
     assert "anyOf" in patch_schema["$defs"]["parameter_patch"]["properties"]["value"]

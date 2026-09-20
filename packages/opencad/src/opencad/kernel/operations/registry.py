@@ -17,6 +17,7 @@ from opencad.kernel.operations.schemas import (
     ChamferEdgesInput,
     CircularPatternInput,
     CreateAssemblyMateInput,
+    CreateKinematicJointInput,
     CreateBoxInput,
     CreateConeInput,
     CreateCylinderInput,
@@ -24,6 +25,7 @@ from opencad.kernel.operations.schemas import (
     CreateSphereInput,
     CreateTorusInput,
     DeleteAssemblyMateInput,
+    DeleteKinematicJointInput,
     DraftInput,
     ExportStlInput,
     ExportStepInput,
@@ -31,8 +33,11 @@ from opencad.kernel.operations.schemas import (
     FilletEdgesInput,
     ImportStepInput,
     ImportStlInput,
+    EvaluateKinematicAssemblyInput,
+    EvaluateKinematicJointInput,
     LinearPatternInput,
     ListAssemblyMatesInput,
+    ListKinematicJointsInput,
     LoftInput,
     MirrorInput,
     OffsetShapeInput,
@@ -107,6 +112,12 @@ class OperationRegistry:
         self._register("create_assembly_mate", CreateAssemblyMateInput, self.kernel.create_assembly_mate)
         self._register("delete_assembly_mate", DeleteAssemblyMateInput, self.kernel.delete_assembly_mate)
         self._register("list_assembly_mates", ListAssemblyMatesInput, self.kernel.list_assembly_mates)
+        # Rigid kinematic joints
+        self._register("create_kinematic_joint", CreateKinematicJointInput, self.kernel.create_kinematic_joint)
+        self._register("delete_kinematic_joint", DeleteKinematicJointInput, self.kernel.delete_kinematic_joint)
+        self._register("list_kinematic_joints", ListKinematicJointsInput, self.kernel.list_kinematic_joints)
+        self._register("evaluate_kinematic_joint", EvaluateKinematicJointInput, self.kernel.evaluate_kinematic_joint)
+        self._register("evaluate_kinematic_assembly", EvaluateKinematicAssemblyInput, self.kernel.evaluate_kinematic_assembly)
 
     def list_operations(self) -> list[str]:
         return list(self._ops.keys())
@@ -166,11 +177,21 @@ class OperationRegistry:
 
         # Log the operation
         is_success = isinstance(result, Success)
+        logged_params = dict(payload)
+        if (
+            is_success
+            and name == "create_kinematic_joint"
+            and result.metadata.get("joint_id")
+        ):
+            # Preserve generated non-shape identity for snapshot/replay so
+            # subsequent evaluate/delete entries keep resolving the same joint.
+            logged_params.setdefault("joint_id", result.metadata["joint_id"])
+
         entry_kwargs: dict[str, Any] = {
             "operation": name,
             "version": spec.version,
             "backend": type(self.kernel.backend).__name__,
-            "params": payload,
+            "params": logged_params,
             "result_shape_id": result.shape_id if is_success else None,
             "success": is_success,
             "duration_ms": round(duration_ms, 3),

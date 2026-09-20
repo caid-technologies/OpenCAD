@@ -251,6 +251,7 @@ class RuntimeContext:
         *,
         artifact_id: str,
         parameters: dict[str, Any] | None = None,
+        kinematic_joints: list[dict[str, Any]] | None = None,
         simulation_tags: list[dict[str, Any]] | None = None,
     ) -> DesignArtifact:
         from opencad.design_artifact import export_design_artifact
@@ -260,6 +261,11 @@ class RuntimeContext:
             artifact_id=artifact_id,
             context=self,
             parameters=parameters,
+            kinematic_joints=(
+                kinematic_joints
+                if kinematic_joints is not None
+                else [joint.model_dump(mode="json") for joint in self.kernel.joint_store.all()]
+            ),
             simulation_tags=simulation_tags,
         )
 
