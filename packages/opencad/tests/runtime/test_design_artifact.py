@@ -32,6 +32,18 @@ def test_part_exports_caid_design_artifact(tmp_path: Path) -> None:
                 "feature_id": part.feature_id,
             }
         },
+        kinematic_joints=[
+            {
+                "id": "elbow",
+                "type": "revolute",
+                "parent_shape_id": "upper-arm",
+                "child_shape_id": "forearm",
+                "axis": [0, 0, 1],
+                "origin_mm": [0, 0, 0],
+                "lower_limit": 0,
+                "upper_limit": 1.57079632679,
+            }
+        ],
         simulation_tags=[
             {"name": "right_forearm", "kind": "body", "target": "r_forearm"},
             {"name": "forearm_length", "kind": "parameter", "target": "link2_length"},
@@ -46,6 +58,9 @@ def test_part_exports_caid_design_artifact(tmp_path: Path) -> None:
     assert artifact.producer == {"name": "opencad", "version": __version__}
     assert artifact.parameters["forearm_length"].value == 0.30
     assert artifact.parameter_values() == {"forearm_length": 0.30}
+    assert len(artifact.kinematic_joints) == 1
+    assert artifact.kinematic_joints[0].id == "elbow"
+    assert artifact.kinematic_joints[0].unit.value == "radian"
     assert len(artifact.simulation_tags) == 2
     assert any(node.operation == "extrude" for node in artifact.feature_tree.nodes.values())
 
