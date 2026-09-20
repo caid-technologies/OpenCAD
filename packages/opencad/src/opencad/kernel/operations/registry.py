@@ -17,6 +17,7 @@ from opencad.kernel.operations.schemas import (
     ChamferEdgesInput,
     CircularPatternInput,
     CreateAssemblyMateInput,
+    CreateKinematicJointInput,
     CreateBoxInput,
     CreateConeInput,
     CreateCylinderInput,
@@ -24,6 +25,7 @@ from opencad.kernel.operations.schemas import (
     CreateSphereInput,
     CreateTorusInput,
     DeleteAssemblyMateInput,
+    DeleteKinematicJointInput,
     DraftInput,
     ExportStlInput,
     ExportStepInput,
@@ -31,8 +33,11 @@ from opencad.kernel.operations.schemas import (
     FilletEdgesInput,
     ImportStepInput,
     ImportStlInput,
+    EvaluateKinematicAssemblyInput,
+    EvaluateKinematicJointInput,
     LinearPatternInput,
     ListAssemblyMatesInput,
+    ListKinematicJointsInput,
     LoftInput,
     MirrorInput,
     OffsetShapeInput,
@@ -107,6 +112,12 @@ class OperationRegistry:
         self._register("create_assembly_mate", CreateAssemblyMateInput, self.kernel.create_assembly_mate)
         self._register("delete_assembly_mate", DeleteAssemblyMateInput, self.kernel.delete_assembly_mate)
         self._register("list_assembly_mates", ListAssemblyMatesInput, self.kernel.list_assembly_mates)
+        # Rigid kinematic joints
+        self._register("create_kinematic_joint", CreateKinematicJointInput, self.kernel.create_kinematic_joint)
+        self._register("delete_kinematic_joint", DeleteKinematicJointInput, self.kernel.delete_kinematic_joint)
+        self._register("list_kinematic_joints", ListKinematicJointsInput, self.kernel.list_kinematic_joints)
+        self._register("evaluate_kinematic_joint", EvaluateKinematicJointInput, self.kernel.evaluate_kinematic_joint)
+        self._register("evaluate_kinematic_assembly", EvaluateKinematicAssemblyInput, self.kernel.evaluate_kinematic_assembly)
 
     def list_operations(self) -> list[str]:
         return list(self._ops.keys())
