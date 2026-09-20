@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Literal
 from uuid import uuid4
 
-from .models import AssemblyMate, ShapeData
+from .models import AssemblyMate, KinematicJoint, ShapeData
 
 IdStrategy = Literal["uuid", "readable"]
 
@@ -100,3 +100,48 @@ class MateStore:
 
     def all_ids(self) -> list[str]:
         return list(self._mates.keys())
+
+
+
+class JointStore:
+    """In-memory store for rigid kinematic joints."""
+
+    def __init__(self, id_strategy: IdStrategy = "uuid") -> None:
+        self._id_strategy = id_strategy
+        self._joints: dict[str, KinematicJoint] = {}
+        self._counter: int = 0
+
+    def new_id(self) -> str:
+        if self._id_strategy == "uuid":
+            return str(uuid4())
+        self._counter += 1
+        return f"joint-{self._counter:04d}"
+
+    def add(self, joint: KinematicJoint) -> KinematicJoint:
+        self._joints[joint.id] = joint
+        return joint
+
+    def get(self, joint_id: str) -> KinematicJoint | None:
+        return self._joints.get(joint_id)
+
+    def delete(self, joint_id: str) -> bool:
+        return self._joints.pop(joint_id, None) is not None
+
+    def by_child(self, shape_id: str) -> KinematicJoint | None:
+        return next(
+            (joint for joint in self._joints.values() if joint.child_shape_id == shape_id),
+            None,
+        )
+
+    def by_shape(self, shape_id: str) -> list[KinematicJoint]:
+        return [
+            joint
+            for joint in self._joints.values()
+            if joint.parent_shape_id == shape_id or joint.child_shape_id == shape_id
+        ]
+
+    def all(self) -> list[KinematicJoint]:
+        return list(self._joints.values())
+
+    def all_ids(self) -> list[str]:
+        return list(self._joints.keys())
