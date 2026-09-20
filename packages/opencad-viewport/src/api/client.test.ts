@@ -147,6 +147,92 @@ describe("OpenCadApiClient routes", () => {
     })).rejects.toThrow("Chat requires an LLM.");
   });
 
+
+  it("creates and evaluates kinematic joints through kernel operations", async () => {
+    const joint = {
+      id: "joint-1",
+      type: "revolute" as const,
+      parent_shape_id: "base",
+      child_shape_id: "lid",
+      axis: [0, 0, 1] as [number, number, number],
+      origin_mm: [10, 0, 0] as [number, number, number],
+      lower_limit: 0,
+      upper_limit: Math.PI / 2,
+      unit: "radian" as const,
+      metadata: {},
+    };
+    const pose = {
+      joint_id: "joint-1",
+      child_shape_id: "lid",
+      progress: 1,
+      value: Math.PI / 2,
+      unit: "radian" as const,
+      transform: {
+        translation_mm: [10, -10, 0] as [number, number, number],
+        rotation_quaternion_xyzw: [0, 0, Math.SQRT1_2, Math.SQRT1_2] as [number, number, number, number],
+      },
+    };
+    mockedAxios.post
+      .mockResolvedValueOnce({ data: { ok: true, metadata: { joint } } })
+      .mockResolvedValueOnce({ data: { ok: true, metadata: { pose } } });
+
+    const client = new OpenCadApiClient("http://127.0.0.1:8003", undefined, false, false);
+
+    await expect(client.createKinematicJoint({
+      type: "revolute",
+      parent_shape_id: "base",
+      child_shape_id: "lid",
+      axis: [0, 0, 1],
+      origin_mm: [10, 0, 0],
+      lower_limit: 0,
+      upper_limit: Math.PI / 2,
+    })).resolves.toEqual(joint);
+    await expect(client.evaluateKinematicJoint("joint-1", 1)).resolves.toEqual(pose);
+
+    expect(mockedAxios.post).toHaveBeenNthCalledWith(
+      1,
+      "http://127.0.0.1:8003/kernel/operations/create_kinematic_joint",
+      {
+        payload: {
+          type: "revolute",
+          parent_shape_id: "base",
+          child_shape_id: "lid",
+          axis: [0, 0, 1],
+          origin_mm: [10, 0, 0],
+          lower_limit: 0,
+          upper_limit: Math.PI / 2,
+        },
+      },
+    );
+    expect(mockedAxios.post).toHaveBeenNthCalledWith(
+      2,
+      "http://127.0.0.1:8003/kernel/operations/evaluate_kinematic_joint",
+      { payload: { joint_id: "joint-1", progress: 1 } },
+    );
+  });
+
+  it("returns evaluated assembly transforms keyed by child shape", async () => {
+    const transforms = {
+      lid: {
+        translation_mm: [10, -10, 0],
+        rotation_quaternion_xyzw: [0, 0, Math.SQRT1_2, Math.SQRT1_2],
+      },
+    };
+    mockedAxios.post.mockResolvedValue({
+      data: { ok: true, metadata: { transforms } },
+    });
+    const client = new OpenCadApiClient("http://127.0.0.1:8003", undefined, false, false);
+
+    await expect(
+      client.evaluateKinematicAssembly({ "joint-1": 1 }),
+    ).resolves.toEqual(transforms);
+
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      "http://127.0.0.1:8003/kernel/operations/evaluate_kinematic_assembly",
+      { payload: { progress_by_joint: { "joint-1": 1 } } },
+    );
+  });
+
   it("uses custom kernel URL for streaming mesh events", () => {
     const close = vi.fn();
     let capturedUrl = "";
