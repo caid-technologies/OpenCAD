@@ -11,6 +11,20 @@ from opencad.design_artifact import (
     validate_design_artifact_payload,
     validate_design_patch_payload,
 )
+from opencad.kinematics import (
+    clamp_progress,
+    compose_transforms,
+    evaluate_assembly_pose,
+    evaluate_joint_pose,
+    joint_value_at_progress,
+)
+from opencad.kernel.core.models import (
+    JointPose,
+    JointUnit,
+    KinematicJoint,
+    KinematicJointType,
+    RigidTransform,
+)
 from opencad.part import Part
 from opencad.runtime import RuntimeContext, get_default_context, reset_default_context, set_default_context
 from opencad.sketch import Sketch
@@ -36,6 +50,16 @@ __all__ = [
     "DesignPatch",
     "ParameterPatch",
     "SimulationTag",
+    "KinematicJoint",
+    "KinematicJointType",
+    "JointUnit",
+    "JointPose",
+    "RigidTransform",
+    "clamp_progress",
+    "joint_value_at_progress",
+    "evaluate_joint_pose",
+    "evaluate_assembly_pose",
+    "compose_transforms",
     "apply_design_patch",
     "export_design_artifact",
     "load_design_artifact",
