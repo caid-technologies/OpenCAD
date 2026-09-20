@@ -306,3 +306,47 @@ def test_registry_exposes_kinematic_operations_and_schema():
     }
     assert expected <= set(registry.list_operations())
     assert registry.get_json_schema("create_kinematic_joint")["properties"]
+
+
+def test_registry_log_preserves_generated_joint_id_for_replay():
+    kernel = make_kernel()
+    registry = OperationRegistry(kernel)
+    base = registry.call("create_box", {"length": 5, "width": 5, "height": 5})
+    lid = registry.call("create_box", {"length": 5, "width": 5, "height": 2})
+    assert isinstance(base, Success) and isinstance(lid, Success)
+
+    created = registry.call(
+        "create_kinematic_joint",
+        {
+            "type": "revolute",
+            "parent_shape_id": base.shape_id,
+            "child_shape_id": lid.shape_id,
+            "upper_limit": 1.0,
+        },
+    )
+    assert isinstance(created, Success)
+    joint_id = created.metadata["joint_id"]
+
+    joint_entry = registry.get_log()[-1]
+    assert joint_entry.params["joint_id"] == joint_id
+
+    fresh = make_kernel()
+    fresh_registry = OperationRegistry(fresh)
+    shape_ids: list[str] = []
+    for entry in registry.get_log():
+        replay_shape_id = entry.result_shape_id
+        result = fresh_registry.call(
+            entry.operation,
+            entry.params,
+            replay_entry_id=entry.id,
+            replay_timestamp=entry.timestamp,
+            replay_shape_id=replay_shape_id,
+        )
+        assert isinstance(result, Success)
+        if result.shape_id:
+            shape_ids.append(result.shape_id)
+
+    listed = fresh.list_kinematic_joints(ListKinematicJointsInput())
+    assert isinstance(listed, Success)
+    assert listed.metadata["joints"][0]["id"] == joint_id
+    assert shape_ids == [base.shape_id, lid.shape_id]
