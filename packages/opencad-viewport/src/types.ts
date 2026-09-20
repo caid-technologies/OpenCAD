@@ -49,6 +49,50 @@ export function createEmptyTree(): FeatureTreeView {
   };
 }
 
+
+export type KinematicJointType = "fixed" | "revolute" | "prismatic";
+export type JointUnit = "none" | "radian" | "mm";
+
+export interface RigidTransform {
+  translation_mm: [number, number, number];
+  rotation_quaternion_xyzw: [number, number, number, number];
+}
+
+export interface KinematicJoint {
+  id: string;
+  type: KinematicJointType;
+  parent_shape_id: string;
+  child_shape_id: string;
+  axis: [number, number, number];
+  origin_mm: [number, number, number];
+  lower_limit: number;
+  upper_limit: number;
+  unit: JointUnit;
+  label?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface JointPose {
+  joint_id: string;
+  child_shape_id: string;
+  progress: number;
+  value: number;
+  unit: JointUnit;
+  transform: RigidTransform;
+}
+
+export interface CreateKinematicJointInput {
+  type: KinematicJointType;
+  parent_shape_id: string;
+  child_shape_id: string;
+  axis?: [number, number, number];
+  origin_mm?: [number, number, number];
+  lower_limit?: number;
+  upper_limit?: number;
+  label?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
 export interface MeshPayload {
   shapeId: string;
   vertices: number[] | Float32Array;
