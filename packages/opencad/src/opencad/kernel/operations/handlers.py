@@ -307,8 +307,13 @@ class OpenCadKernel:
                 failed_check="joint_cycle",
             )
 
+        if payload.joint_id and self.joint_store.get(payload.joint_id) is not None:
+            return self._invalid_input(
+                f"Kinematic joint id '{payload.joint_id}' already exists."
+            )
+
         joint = KinematicJoint(
-            id=self.joint_store.new_id(),
+            id=payload.joint_id or self.joint_store.new_id(),
             type=payload.type,
             parent_shape_id=payload.parent_shape_id,
             child_shape_id=payload.child_shape_id,
