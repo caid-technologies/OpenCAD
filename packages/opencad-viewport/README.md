@@ -62,11 +62,32 @@ documented class names.
 | `projectFeatureTree` | Flatten a feature tree into renderable rows |
 | `getViewportShapeIds`, `getHighlightedViewportShapeIds` | Resolve which shapes are visible or highlighted |
 | `getMeshMaterialGroups` | Split a mesh into material groups for face-level highlighting |
+| `normalizeRigidTransform`, `transformsFromJointPoses` | Normalize and map renderer-ready rigid transforms |
 | `sketchFromNode` | Extract a sketch payload from a feature node |
 | `mockMeshes`, `mockFeatureTree`, `mockSketch`, `mockChat`, `mockSolveSketch` | Fixtures for tests, stories, and offline development |
 
 All view models (`FeatureTreeView`, `MeshPayload`, `SketchPayload`, …) are
 exported as types.
+
+
+## Rigid motion / mechanism preview
+
+OpenCAD owns the joint model and pose evaluation. The viewport only applies
+renderer-ready transforms, so product UIs do not need to duplicate axis, pivot,
+or quaternion math.
+
+```tsx
+const transforms = await client.evaluateKinematicAssembly({
+  "rear-cover-hinge": 0.75,
+});
+
+<Viewport3D meshes={meshes} shapeTransforms={transforms} />;
+```
+
+Create joints through the typed client with `createKinematicJoint`. Supported
+rigid joint types are `fixed`, `revolute`, and `prismatic`. Revolute
+limits use radians; prismatic limits use millimeters. Compliant/flexure
+deformation is deliberately outside this rigid-joint contract.
 
 ## Backend
 
