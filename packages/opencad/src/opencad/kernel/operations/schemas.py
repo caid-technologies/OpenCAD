@@ -260,6 +260,7 @@ class CreateKinematicJointInput(BaseModel):
     """
 
     type: KinematicJointType
+    joint_id: str | None = Field(default=None, min_length=1)
     parent_shape_id: str = Field(min_length=1)
     child_shape_id: str = Field(min_length=1)
     axis: tuple[FiniteFloat, FiniteFloat, FiniteFloat] = (0.0, 0.0, 1.0)
