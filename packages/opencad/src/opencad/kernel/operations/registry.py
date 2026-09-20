@@ -177,11 +177,21 @@ class OperationRegistry:
 
         # Log the operation
         is_success = isinstance(result, Success)
+        logged_params = dict(payload)
+        if (
+            is_success
+            and name == "create_kinematic_joint"
+            and result.metadata.get("joint_id")
+        ):
+            # Preserve generated non-shape identity for snapshot/replay so
+            # subsequent evaluate/delete entries keep resolving the same joint.
+            logged_params.setdefault("joint_id", result.metadata["joint_id"])
+
         entry_kwargs: dict[str, Any] = {
             "operation": name,
             "version": spec.version,
             "backend": type(self.kernel.backend).__name__,
-            "params": payload,
+            "params": logged_params,
             "result_shape_id": result.shape_id if is_success else None,
             "success": is_success,
             "duration_ms": round(duration_ms, 3),
