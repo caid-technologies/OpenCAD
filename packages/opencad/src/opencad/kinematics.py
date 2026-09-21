@@ -3,12 +3,91 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping, Sequence
 
+from pydantic import BaseModel, ConfigDict, Field, FiniteFloat
+
 from opencad.kernel.core.models import (
     JointPose,
     KinematicJoint,
     KinematicJointType,
     RigidTransform,
 )
+
+
+class GearCoupling(BaseModel):
+    """External gears on parallel, equally directed axes in a shared frame.
+
+    Angles are radians relative to the modeled rest geometry. Tooth/space
+    alignment can be baked into that geometry; phase_radians then stays zero.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    driver_joint_id: str = Field(min_length=1)
+    driven_joint_id: str = Field(min_length=1)
+    driver_teeth: int = Field(gt=0, strict=True)
+    driven_teeth: int = Field(gt=0, strict=True)
+    phase_radians: FiniteFloat = 0.0
+
+
+def resolve_gear_progress(
+    joints: Sequence[KinematicJoint],
+    progress_by_joint: Mapping[str, float],
+    couplings: Sequence[GearCoupling],
+) -> dict[str, float]:
+    """Resolve a directed gear train without clamping invalid driven angles."""
+    by_id = {joint.id: joint for joint in joints}
+    if len(by_id) != len(joints):
+        raise ValueError("Kinematic joint IDs must be unique.")
+    unknown = set(progress_by_joint) - by_id.keys()
+    if unknown:
+        raise ValueError(f"Unknown joint progress: {sorted(unknown)}")
+    resolved = {key: clamp_progress(value) for key, value in progress_by_joint.items()}
+    by_driven: dict[str, GearCoupling] = {}
+    for coupling in couplings:
+        driver = by_id.get(coupling.driver_joint_id)
+        driven = by_id.get(coupling.driven_joint_id)
+        if driver is None or driven is None:
+            raise ValueError("Gear coupling references an unknown joint.")
+        if driver.id == driven.id or driven.id in by_driven:
+            raise ValueError("Each driven gear must have exactly one distinct driver.")
+        if any(j.type != KinematicJointType.REVOLUTE for j in (driver, driven)):
+            raise ValueError("Gear coupling requires revolute joints.")
+        if driver.parent_shape_id != driven.parent_shape_id:
+            raise ValueError("Coupled gears must share a parent coordinate frame.")
+        if sum(a * b for a, b in zip(_unit(driver.axis), _unit(driven.axis))) < 1 - 1e-9:
+            raise ValueError("Coupled gear axes must be parallel and equally directed.")
+        if driven.upper_limit <= driven.lower_limit:
+            raise ValueError("Driven gear must have a nonzero angular range.")
+        by_driven[driven.id] = coupling
+
+    visiting: set[str] = set()
+    complete: set[str] = set()
+
+    def resolve(joint_id: str) -> float:
+        if joint_id not in by_driven:
+            return resolved.get(joint_id, 0.0)
+        if joint_id in visiting:
+            raise ValueError("Gear coupling graph contains a cycle.")
+        if joint_id in complete:
+            return resolved[joint_id]
+        visiting.add(joint_id)
+        coupling = by_driven[joint_id]
+        driver = by_id[coupling.driver_joint_id]
+        driven = by_id[joint_id]
+        angle = (coupling.phase_radians - coupling.driver_teeth / coupling.driven_teeth
+                 * joint_value_at_progress(driver, resolve(driver.id)))
+        progress = (angle - driven.lower_limit) / (driven.upper_limit - driven.lower_limit)
+        if progress < -1e-10 or progress > 1 + 1e-10:
+            raise ValueError(f"Coupled angle exceeds limits for '{joint_id}'.")
+        if joint_id in progress_by_joint and not math.isclose(resolved[joint_id], progress, abs_tol=1e-10):
+            raise ValueError(f"Explicit progress conflicts with coupling for '{joint_id}'.")
+        resolved[joint_id] = clamp_progress(progress)
+        visiting.remove(joint_id)
+        complete.add(joint_id)
+        return resolved[joint_id]
+
+    for joint_id in by_driven:
+        resolve(joint_id)
+    return resolved
 
 
 def clamp_progress(progress: float) -> float:
@@ -67,6 +146,8 @@ def evaluate_joint_pose(joint: KinematicJoint, progress: float) -> JointPose:
 def evaluate_assembly_pose(
     joints: Sequence[KinematicJoint],
     progress_by_joint: Mapping[str, float] | None = None,
+    *,
+    gear_couplings: Sequence[GearCoupling] = (),
 ) -> dict[str, RigidTransform]:
     """Evaluate a tree of rigid joints into world transforms by child shape.
 
@@ -74,6 +155,8 @@ def evaluate_assembly_pose(
     implied. Each child may have at most one parent joint. Cycles are rejected.
     """
     progress_by_joint = progress_by_joint or {}
+    if gear_couplings:
+        progress_by_joint = resolve_gear_progress(joints, progress_by_joint, gear_couplings)
     by_child: dict[str, KinematicJoint] = {}
     by_parent: dict[str, list[KinematicJoint]] = {}
 
