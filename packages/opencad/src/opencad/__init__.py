@@ -1,3 +1,12 @@
+from opencad.assembly import (
+    ASSEMBLY_SNAPSHOT_VERSION,
+    AssemblyComponent,
+    AssemblySnapshotV1,
+    AssemblyTree,
+    deserialize_assembly_tree,
+    import_assembly_tree,
+    serialize_assembly_tree,
+)
 from opencad.cli import main
 from opencad.design_artifact import (
     DesignArtifact,
@@ -37,6 +46,13 @@ from opencad.turntable import (
 from opencad.version import __version__
 
 __all__ = [
+    "ASSEMBLY_SNAPSHOT_VERSION",
+    "AssemblyComponent",
+    "AssemblySnapshotV1",
+    "AssemblyTree",
+    "deserialize_assembly_tree",
+    "import_assembly_tree",
+    "serialize_assembly_tree",
     "Part",
     "Sketch",
     "RuntimeContext",
