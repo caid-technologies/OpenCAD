@@ -39,6 +39,37 @@ export interface FeatureTreeView {
   revision: number;
 }
 
+export interface AssemblyComponentView {
+  id: string;
+  name: string;
+  child_ids: string[];
+  geometry_refs: string[];
+  feature_refs: string[];
+  transform?: RigidTransform;
+  metadata: Record<string, unknown>;
+}
+
+export interface AssemblyTreeView {
+  id: string;
+  name: string;
+  root_ids: string[];
+  components: Record<string, AssemblyComponentView>;
+  metadata: Record<string, unknown>;
+}
+
+export function createEmptyAssemblyTree(
+  id = "assembly",
+  name = "Assembly",
+): AssemblyTreeView {
+  return {
+    id,
+    name,
+    root_ids: [],
+    components: {},
+    metadata: {},
+  };
+}
+
 export function createEmptyTree(): FeatureTreeView {
   return {
     root_id: "root",
