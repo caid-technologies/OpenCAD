@@ -11,6 +11,7 @@
 
 export { CadFileToolbar } from "./components/CadFileToolbar";
 export { ChatPanel } from "./components/ChatPanel";
+export { ComponentTreePanel } from "./components/ComponentTreePanel";
 export { FeatureTreePanel } from "./components/FeatureTreePanel";
 export { SketchEditor } from "./components/SketchEditor";
 export { Viewport3D } from "./components/Viewport3D";
@@ -22,6 +23,7 @@ export type { MeshStreamChunk } from "./api/client";
 
 // ── Feature-tree helpers ────────────────────────────────────────────
 
+export { getAssemblyComponentIds, getAssemblyGeometryRefs, getAssemblyParents } from "./assemblyTree";
 export { projectFeatureTree } from "./featureTreeProjection";
 export type { FeatureTreeProjection, ToolBranchReference } from "./featureTreeProjection";
 export { getHighlightedViewportShapeIds, getViewportShapeIds } from "./featureVisibility";
@@ -36,8 +38,10 @@ export { mockChat, mockFeatureTree, mockMeshes, mockSketch, mockSolveSketch } fr
 
 // ── Types ───────────────────────────────────────────────────────────
 
-export { createEmptySketch, createEmptyTree } from "./types";
+export { createEmptyAssemblyTree, createEmptySketch, createEmptyTree } from "./types";
 export type {
+  AssemblyComponentView,
+  AssemblyTreeView,
   CadFileFormat,
   CadImportResult,
   ChatHistoryItem,
