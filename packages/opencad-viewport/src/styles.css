@@ -28,6 +28,7 @@ body {
 }
 
 .feature-tree-panel,
+.component-tree-panel,
 .chat-panel,
 .workspace {
   background: rgba(255, 255, 255, 0.92);
@@ -158,6 +159,12 @@ body {
 .tree-node-label {
   cursor: pointer;
   font-size: 0.88rem;
+}
+
+.tree-empty {
+  padding: 12px 10px;
+  color: #94a3b8;
+  font-size: 0.78rem;
 }
 
 .workspace {
@@ -531,7 +538,8 @@ body {
     min-height: 380px;
   }
 
-  .feature-tree-panel {
+  .feature-tree-panel,
+  .component-tree-panel {
     max-height: 260px;
   }
 
