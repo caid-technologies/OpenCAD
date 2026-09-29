@@ -46,3 +46,23 @@ def check_bbox_overlap(a: ShapeData, b: ShapeData, tolerance: float) -> Failure 
             failed_check="bbox_overlap",
         )
     return None
+
+
+def check_bbox_separation(a: ShapeData, b: ShapeData, tolerance: float) -> Failure | None:
+    """Conservative native-union filter, using distances rather than volumes.
+
+    Contact or a gap within tolerance must be decided by the geometry kernel;
+    an overlapping bounding box alone does not prove that two solids join.
+    """
+    for axis in ("x", "y", "z"):
+        gap = max(getattr(a.bbox, f"min_{axis}"), getattr(b.bbox, f"min_{axis}")) - min(
+            getattr(a.bbox, f"max_{axis}"), getattr(b.bbox, f"max_{axis}")
+        )
+        if gap > tolerance:
+            return make_failure(
+                code=ErrorCode.BBOX_NO_OVERLAP,
+                message=f"Bounding boxes for '{a.id}' and '{b.id}' are separated beyond tolerance.",
+                suggestion="Move solids into face contact or overlap before union.",
+                failed_check="bbox_separation",
+            )
+    return None
