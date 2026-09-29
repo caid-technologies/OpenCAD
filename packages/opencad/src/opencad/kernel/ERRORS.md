@@ -6,14 +6,14 @@
   - Fix: pass a `shape_id` from a previous successful operation.
 - `ZERO_VOLUME`: Shape volume is zero or Boolean result collapsed to zero.
   - Fix: increase dimensions or reduce subtraction overlap.
-- `BBOX_NO_OVERLAP`: Bounding boxes do not overlap for union/intersection pre-flight.
-  - Fix: move shapes so they intersect in space.
-- `BBOX_NEAR_TANGENT`: Overlap exists but is below tolerance (`1e-6`) and treated as unstable.
-  - Fix: increase overlap or adjust tolerance policy.
-- `NON_MANIFOLD`: Input shape failed manifold pre-flight.
+- `BBOX_NO_OVERLAP`: Bounding boxes do not overlap for analytic booleans/native intersection, or are separated beyond the linear tolerance for native union.
+  - Fix: move solids into contact or overlap. Native union lets OCCT resolve face contact and small gaps within tolerance.
+- `BBOX_NEAR_TANGENT`: Bounding-box overlap volume is below tolerance for analytic booleans/native intersection. Native union does not use this volume test.
+  - Fix: increase volumetric overlap for intersection or analytic operations.
+- `NON_MANIFOLD`: Input shape failed manifold pre-flight, or native union produced invalid geometry.
   - Fix: heal the geometry before Boolean operations.
-- `BOOLEAN_KERNEL_ERROR`: Boolean execution raised an unexpected exception.
-  - Fix: inspect inputs and retry with valid manifold solids.
+- `BOOLEAN_KERNEL_ERROR`: Boolean execution failed, or native union did not produce a valid solid join.
+  - Fix: inspect inputs and retry with valid manifold solids. Two single-solid union operands must fuse into one solid; separated solids or edge/point-only contact fail with `boolean_result_connectivity`. Existing multi-body pattern/compound operands may retain multiple result solids.
 - `FILLET_RADIUS_TOO_LARGE`: Requested fillet radius exceeds local shape bounds.
   - Fix: reduce radius or enlarge the source feature.
 - `OFFSET_COLLAPSE`: Negative offset collapses one or more shape dimensions.

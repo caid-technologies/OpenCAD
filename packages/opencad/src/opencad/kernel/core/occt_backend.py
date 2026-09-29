@@ -156,7 +156,12 @@ if HAS_OCCT:  # pragma: no branch
     TopTools_ListOfShape = toptools_mod.TopTools_ListOfShape
     TopTools_IndexedMapOfShape = toptools_mod.TopTools_IndexedMapOfShape
 
-from opencad.kernel.core.checks import check_bbox_overlap, check_manifold, check_nonzero_volume
+from opencad.kernel.core.checks import (
+    check_bbox_overlap,
+    check_bbox_separation,
+    check_manifold,
+    check_nonzero_volume,
+)
 from opencad.kernel.core.errors import ErrorCode, make_failure
 from opencad.kernel.core.models import (
     BoundingBox,
@@ -896,7 +901,11 @@ class OcctBackend:
             m = check_manifold(shape)
             if m:
                 return m
-        if op in {"boolean_union", "boolean_intersection"}:
+        if op == "boolean_union":
+            # Face contact has zero overlap volume but can fuse into a solid.
+            # Keep the volume-overlap policy for intersection and analytic CAD.
+            return check_bbox_separation(a, b, self.tolerance)
+        if op == "boolean_intersection":
             overlap = check_bbox_overlap(a, b, self.tolerance)
             if overlap:
                 return overlap
@@ -924,7 +933,16 @@ class OcctBackend:
 
         try:
             if op == "boolean_union":
-                algo = BRepAlgoAPI_Fuse(native_a, native_b)
+                arguments, tool_shapes = TopTools_ListOfShape(), TopTools_ListOfShape()
+                arguments.Append(native_a)
+                tool_shapes.Append(native_b)
+                algo = BRepAlgoAPI_Fuse()
+                algo.SetArguments(arguments)
+                algo.SetTools(tool_shapes)
+                # Fusion may adjust tolerances near contact. Copy modified
+                # subshapes so the operands and their stored bounds stay valid.
+                algo.SetNonDestructive(True)
+                algo.Build()
             elif op == "boolean_cut":
                 algo = BRepAlgoAPI_Cut(native_a, native_b)
             else:
@@ -939,6 +957,34 @@ class OcctBackend:
                 )
 
             result_native = algo.Shape()
+            if op == "boolean_union":
+                if result_native.IsNull() or not _is_manifold(result_native):
+                    return make_failure(
+                        code=ErrorCode.NON_MANIFOLD,
+                        message="OCCT union produced invalid geometry.",
+                        suggestion="Check the contact for tangency or zero-thickness connections.",
+                        failed_check="boolean_result_validity",
+                    )
+                solids_a = cq.Shape.cast(native_a).Solids()
+                solids_b = cq.Shape.cast(native_b).Solids()
+                result_solids = cq.Shape.cast(result_native).Solids()
+                if not solids_a or not solids_b or not result_solids:
+                    return make_failure(
+                        code=ErrorCode.BOOLEAN_KERNEL_ERROR,
+                        message="Union requires solid operands and a solid result.",
+                        suggestion="Create closed solids before union.",
+                        failed_check="boolean_result_validity",
+                    )
+                # OCCT also reports success for a compound of disjoint solids.
+                # Two single bodies must actually join; existing multi-body
+                # pattern/compound operands may still have multi-body results.
+                if len(solids_a) == len(solids_b) == 1 and len(result_solids) != 1:
+                    return make_failure(
+                        code=ErrorCode.BOOLEAN_KERNEL_ERROR,
+                        message="OCCT union did not join the two solids into one solid.",
+                        suggestion="Move solids into face contact or overlap; edge or point contact is insufficient.",
+                        failed_check="boolean_result_connectivity",
+                    )
             result_volume = _volume_from_shape(result_native)
 
             if result_volume <= self.tolerance:
