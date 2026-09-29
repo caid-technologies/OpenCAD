@@ -346,7 +346,9 @@ def _sketch_edge(
     if segment.type == "circle" and segment.center and segment.radius:
         cx, cy = segment.center
         if plane == "XZ":
-            axis = gp_Ax2(gp_Pnt(ox + cx, oy, oz + cy), gp_Dir(0, 1, 0))
+            # Local sketch X/Y map to world X/Z, whose oriented normal is -Y.
+            # Match line/arc winding so reversing an inner circle makes a hole.
+            axis = gp_Ax2(gp_Pnt(ox + cx, oy, oz + cy), gp_Dir(0, -1, 0))
         elif plane == "YZ":
             axis = gp_Ax2(gp_Pnt(ox, oy + cx, oz + cy), gp_Dir(1, 0, 0))
         else:
@@ -1516,6 +1518,22 @@ class OcctBackend:
                         failed_check="profile_face_build",
                     )
                 native = face_builder.Face()
+                # IsDone only confirms that OCCT constructed a face. It can
+                # still contain crossing, tangent, or out-of-bounds hole wires.
+                if not _is_manifold(native):
+                    return make_failure(
+                        code=ErrorCode.SKETCH_ERROR,
+                        message=(
+                            "Invalid sketch profile: subtractive loops must lie strictly inside "
+                            "the outer profile and must not touch or intersect its boundary "
+                            "or each other. Check for tangency and self-intersection."
+                        ),
+                        suggestion=(
+                            "Move holes fully inside the profile with clearance. For an edge "
+                            "notch, extrude a separate cutting solid and use Part.cut()."
+                        ),
+                        failed_check="profile_validity",
+                    )
 
             # Store the profile as a wire, or as a face when it contains holes.
             shape_id = self._store.new_id("sketch")
@@ -1554,7 +1572,25 @@ class OcctBackend:
             if native.ShapeType() == TopAbs_FACE:
                 face = TopoDS.Face_s(native)
             else:
-                face = BRepBuilderAPI_MakeFace(native).Face()
+                face_builder = BRepBuilderAPI_MakeFace(native)
+                if not face_builder.IsDone():
+                    return make_failure(
+                        code=ErrorCode.EXTRUDE_FAILURE,
+                        message=f"Sketch '{meta.id}' cannot form a planar extrusion profile.",
+                        suggestion="Use a closed, planar profile without self-intersections.",
+                        failed_check="extrude_profile",
+                    )
+                face = face_builder.Face()
+            if not _is_manifold(face):
+                return make_failure(
+                    code=ErrorCode.EXTRUDE_FAILURE,
+                    message=f"Sketch '{meta.id}' has an invalid extrusion profile.",
+                    suggestion=(
+                        "Close the profile and remove self-intersections. Keep subtractive "
+                        "loops strictly inside the outer boundary without touching each other."
+                    ),
+                    failed_check="extrude_profile",
+                )
             # Raise along the sketch plane's normal. Extruding a non-XY sketch
             # along Z would sweep the profile within its own plane and produce a
             # zero-volume shape that still looks like a success.
@@ -1572,6 +1608,21 @@ class OcctBackend:
             else:
                 prism_mod = importlib.import_module("OCP.BRepPrimAPI")
                 result_native = prism_mod.BRepPrimAPI_MakePrism(face, vec).Shape()
+
+            # Do not register an invalid or zero-volume body as a successful
+            # feature and leave a later boolean to report a misleading error.
+            if (
+                result_native.IsNull()
+                or not _is_manifold(result_native)
+                or not cq.Shape.cast(result_native).Solids()
+                or _volume_from_shape(result_native) <= self.tolerance
+            ):
+                return make_failure(
+                    code=ErrorCode.EXTRUDE_FAILURE,
+                    message=f"Extruding sketch '{meta.id}' did not produce a valid solid.",
+                    suggestion="Check the profile for tangency or self-intersection and use a non-zero depth.",
+                    failed_check="extrude_result",
+                )
 
             shape = self._register_shape(
                 "extrude", result_native, payload.model_dump(), source_ids=[meta.id],

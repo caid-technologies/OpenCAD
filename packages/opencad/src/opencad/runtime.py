@@ -116,7 +116,13 @@ class RuntimeContext:
         else:
             response = registry_result_to_dict(self.registry, operation, payload)
         if not response.get("ok"):
-            raise RuntimeError(f"Operation '{operation}' failed: {response.get('message', 'unknown error')}")
+            message = response.get("message", "unknown error")
+            suggestion = response.get("suggestion")
+            if suggestion:
+                message = f"{message} {suggestion}"
+            raise RuntimeError(
+                f"Operation '{operation}' failed for feature {feature_name!r}: {message}"
+            )
         shape_id = response.get("shape_id")
         if not shape_id:
             raise RuntimeError(f"Operation '{operation}' returned no shape_id.")
