@@ -35,6 +35,30 @@ result = service.chat(ChatRequest(message="Build a cog", tree_state=tree))
 Configure the model with `OPENCAD_LLM_MODEL` and, when the provider needs it,
 `OPENCAD_LLM_PROVIDER`.
 
+## Runtime context ownership
+
+Agent validation and execution temporarily bind their own runtime and restore
+the caller's previous binding, including when validation or execution fails. After
+`run_chat(ctx, ...)`, fluent `Part()` and `Sketch()` calls continue using the
+same default context as before the call. Validation uses a separate runtime;
+`run_chat` executes the accepted code against `ctx.kernel_client` and adopts
+the resulting tree.
+
+For explicit scoped fluent work:
+
+```python
+from opencad import Part, RuntimeContext, use_default_context
+
+with use_default_context(RuntimeContext()) as ctx:
+    Part().box(10, 10, 10)
+# The previous default context is restored here, even if the block raises.
+```
+
+Bindings are local to the current thread/async context. Child async tasks inherit
+bindings, so independent tasks should each bind a fresh runtime. Binding isolation
+does not make concurrent mutation of the same `RuntimeContext` or shared kernel
+safe. HTTP and in-process callers retain their separate service entry points.
+
 ## Kernel access
 
 The agent never speaks HTTP. It takes a `KernelClient`

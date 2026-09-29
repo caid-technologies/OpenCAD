@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from copy import deepcopy
+from typing import TYPE_CHECKING
 
 from opencad_agent.generated_code import execute_generated_code
 from opencad_agent.llm import LiteLlmProvider
@@ -10,6 +11,9 @@ from opencad_agent.models import ChatRequest, ChatResponse, OperationExecution
 from opencad_agent.prompting import build_code_generation_prompt
 from opencad.kernel.client import KernelClient
 from opencad.tree.models import FeatureTree
+
+if TYPE_CHECKING:
+    from opencad.runtime import RuntimeContext
 
 logger = logging.getLogger(__name__)
 
@@ -118,14 +122,11 @@ class OpenCadAgentService:
             raise GeneratedCodeValidationError(f"Generated code validation failed: {exc}") from exc
 
     @staticmethod
-    def _execute_code_in_context(code: str, ctx: object) -> None:
-        from opencad.runtime import reset_default_context, set_default_context
+    def _execute_code_in_context(code: str, ctx: RuntimeContext) -> None:
+        from opencad.runtime import use_default_context
 
-        set_default_context(ctx)
-        try:
+        with use_default_context(ctx):
             execute_generated_code(code)
-        finally:
-            reset_default_context()
 
     def _generate_code(self, request: ChatRequest, *, user_message: str | None = None) -> str:
         provider = request.llm_provider or os.environ.get("OPENCAD_LLM_PROVIDER")

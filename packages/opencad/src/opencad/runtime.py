@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -322,22 +325,42 @@ class RuntimeContext:
         return self.tree
 
 
-_DEFAULT_CONTEXT: RuntimeContext | None = None
+_DEFAULT_CONTEXT: ContextVar[RuntimeContext | None] = ContextVar(
+    "opencad_default_context", default=None
+)
 
 
 def get_default_context() -> RuntimeContext:
-    global _DEFAULT_CONTEXT
-    if _DEFAULT_CONTEXT is None:
-        _DEFAULT_CONTEXT = RuntimeContext()
-    return _DEFAULT_CONTEXT
+    """Get the current execution's runtime, creating it lazily when unbound."""
+    context = _DEFAULT_CONTEXT.get()
+    if context is None:
+        context = RuntimeContext()
+        _DEFAULT_CONTEXT.set(context)
+    return context
 
 
 def set_default_context(context: RuntimeContext) -> None:
-    global _DEFAULT_CONTEXT
-    _DEFAULT_CONTEXT = context
+    """Replace the default runtime in the current execution context."""
+    _DEFAULT_CONTEXT.set(context)
 
 
 def reset_default_context() -> RuntimeContext:
-    global _DEFAULT_CONTEXT
-    _DEFAULT_CONTEXT = RuntimeContext()
-    return _DEFAULT_CONTEXT
+    """Create and bind a fresh runtime in the current execution context."""
+    context = RuntimeContext()
+    _DEFAULT_CONTEXT.set(context)
+    return context
+
+
+@contextmanager
+def use_default_context(context: RuntimeContext) -> Iterator[RuntimeContext]:
+    """Temporarily bind a runtime, restoring the prior binding even on failure.
+
+    Child async tasks inherit context bindings. Independent work should bind its
+    own runtime; this scope isolates the binding, not mutations of a shared
+    RuntimeContext instance.
+    """
+    token = _DEFAULT_CONTEXT.set(context)
+    try:
+        yield context
+    finally:
+        _DEFAULT_CONTEXT.reset(token)
