@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 load_dotenv()
 import json
 import logging
-import os
 from typing import Any
 
 from fastapi import APIRouter, FastAPI, HTTPException, Query
@@ -21,7 +20,7 @@ from opencad.solver.models import Sketch
 from opencad.tree.models import FeatureNode, FeatureTree, RebuildRequest, TreeSnapshotV1
 from opencad.tree.service import FeatureTreeService
 from opencad_server.api_app import create_api_app
-from opencad_server.http_kernel_client import HttpKernelClient
+from opencad_server.http_kernel_client import configured_kernel_client
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +28,7 @@ router = APIRouter()
 
 _TREES: dict[str, FeatureTree] = {}
 
-_USE_LIVE_KERNEL = os.environ.get("OPENCAD_TREE_LIVE_KERNEL", "false").lower() == "true"
-_KERNEL_CLIENT: KernelClient | None = HttpKernelClient() if _USE_LIVE_KERNEL else None
+_KERNEL_CLIENT: KernelClient | None = configured_kernel_client("OPENCAD_TREE_LIVE_KERNEL")
 
 
 class EditFeatureRequest(BaseModel):
@@ -69,7 +67,7 @@ def _kernel_client(node: FeatureNode, _tree: FeatureTree) -> str:
     """Execute a feature node against the configured kernel.
 
     Falls back to a deterministic hash stub when no kernel client is
-    configured (the default) so that tests and mock mode continue to work.
+    configured explicitly by tests. Web requests use real geometry by default.
     """
     if _KERNEL_CLIENT is None:
         return _kernel_client_stub(node, _tree)

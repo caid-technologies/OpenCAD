@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+import pytest
+from opencad_server import tree_router
 
 from opencad_server.tree_router import app
 from opencad.tree.models import FeatureNode, FeatureTree
@@ -35,7 +37,9 @@ def _build_12_node_tree(root_id: str = "base") -> FeatureTree:
     return FeatureTree(nodes=nodes, root_id=root_id)
 
 
-def test_tree_api_crud_and_rebuild() -> None:
+def test_tree_api_crud_and_rebuild(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise DAG invalidation with an explicit stub for non-geometric fixtures."""
+    monkeypatch.setattr(tree_router, "_KERNEL_CLIENT", None)
     client = TestClient(app)
     tree = _build_12_node_tree(root_id="api-root")
 
