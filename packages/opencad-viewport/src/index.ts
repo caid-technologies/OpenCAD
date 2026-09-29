@@ -74,3 +74,14 @@ export type {
   TreeSnapshotPayload,
   TypedParameter,
 } from "./types";
+
+// Independent scenes and temporary interaction relationships.
+export { ScenePlayer } from "./components/ScenePlayer";
+export type { ScenePlayerProps } from "./components/ScenePlayer";
+export { createScenePlayer, evaluateScene, sceneDuration, validateScene } from "./scene";
+export type { Attachment, Interaction, SceneDocument, SceneEntity, SceneInterface, SceneState } from "./scene";
+export { robotPickPlaceExample } from "./examples/robotPickPlace";
+
+export { validateSceneMotion, clampSceneTime } from "./sceneCollision";
+export type { MotionCheck, CollisionOptions } from "./sceneCollision";
+export type { SceneCollider } from "./scene";

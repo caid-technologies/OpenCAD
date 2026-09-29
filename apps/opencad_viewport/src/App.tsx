@@ -5,6 +5,8 @@ import {
   FeatureTreePanel,
   OpenCadApiClient,
   SketchEditor,
+  ScenePlayer,
+  robotPickPlaceExample,
   Viewport3D,
   createEmptyTree,
   getHighlightedViewportShapeIds,
@@ -68,6 +70,7 @@ function createFallbackMesh(node: FeatureNodeView, index: number): MeshPayload {
 }
 
 export default function App(): JSX.Element {
+  const [showScene, setShowScene] = useState(false);
   const api = useMemo(() => new OpenCadApiClient(), []);
   const [tree, setTree] = useState<FeatureTreeView>(createEmptyTree);
   const [meshes, setMeshes] = useState<MeshPayload[]>([]);
@@ -127,6 +130,26 @@ export default function App(): JSX.Element {
     };
   }, [api, loadedShapeIds, tree, viewportShapeIds]);
 
+  if (showScene) {
+    return <main className="scene-demo">
+      <header>
+        <button type="button" className="scene-demo-toggle" onClick={() => setShowScene(false)}>Back to CAD</button>
+        <p>Independent scene roots: Robot arm · Box · Destination table</p>
+      </header>
+      <ScenePlayer document={robotPickPlaceExample.document} meshes={robotPickPlaceExample.meshes}
+        onSave={(document) => {
+          const url = URL.createObjectURL(new Blob([JSON.stringify(document, null, 2)], { type: "application/json" }));
+          const anchor = window.document.createElement("a");
+          anchor.href = url;
+          anchor.download = "robot-pick-place.scene.json";
+          window.document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+          URL.revokeObjectURL(url);
+        }} />
+    </main>;
+  }
+
   return (
     <div className="app-shell">
       <FeatureTreePanel
@@ -136,6 +159,7 @@ export default function App(): JSX.Element {
       />
 
       <main className="workspace">
+        <button type="button" className="scene-demo-toggle" onClick={() => setShowScene(true)}>Robot pick-and-place demo</button>
         <CadFileToolbar
           canExport={Boolean(selectedShapeId)}
           onImport={async (file) => {

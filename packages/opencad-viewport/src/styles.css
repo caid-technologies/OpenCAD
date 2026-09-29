@@ -550,3 +550,23 @@ body {
     margin: 10px;
   }
 }
+
+.scene-player {
+  display: flex;
+  flex-direction: column;
+  min-height: 480px;
+  height: 100%;
+}
+.scene-player .viewport3d { flex: 1; min-height: 360px; }
+.scene-controls { display: flex; align-items: center; gap: 12px; padding: 12px; flex-wrap: wrap; }
+.scene-controls button, .scene-demo-toggle { padding: 7px 12px; cursor: pointer; }
+.scene-timeline { display: flex; align-items: center; gap: 8px; flex: 1; }
+.scene-timeline input { width: 100%; min-width: 100px; }
+.scene-status { padding: 0 12px 12px; color: #475569; }
+.scene-demo { height: 100vh; display: flex; flex-direction: column; padding: 12px; }
+.scene-demo > header { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.scene-demo .scene-player { flex: 1; min-height: 0; }
+.scene-demo-toggle { margin: 10px; align-self: flex-start; }
+.workspace > .scene-demo-toggle { position: absolute; top: 62px; left: 6px; z-index: 20; }
+
+.scene-collision { margin: 0 12px 12px; padding: 10px; border: 1px solid #e5aaa6; border-radius: 8px; background: #fff0ee; color: #9b2820; }

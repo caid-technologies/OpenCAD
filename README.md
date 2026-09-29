@@ -196,6 +196,11 @@ pnpm --filter opencad-viewport build     # build the component library first
 pnpm --filter opencad-viewport-app dev   # → http://localhost:5173
 ```
 
+The **Robot pick-and-place demo** runs a scene of independent machines/objects with
+`MOVE`, `GRASP`, `PLACE`, and `RELEASE` interactions. It includes playback,
+scrubbing, collision checks that stop invalid motion, and JSON scene saving. See [Scene interactions](docs/SCENE_INTERACTIONS.md)
+for the Python and React APIs.
+
 The viewport uses **mock geometry/solver data** by default (no backend required for those flows).
 Chat targets the live agent service by default; set `VITE_USE_CHAT_MOCK=true` if you explicitly want mocked chat output.
 Set `VITE_USE_MOCK=false` to connect the rest of the viewport to the live services above.
