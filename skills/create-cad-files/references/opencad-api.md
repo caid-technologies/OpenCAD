@@ -32,7 +32,23 @@ The build helper exports the runtime's last generated shape. Ensure the final op
 - `.circle(radius, center=(x, y), subtract=False)`
 - `.line((x1, y1), (x2, y2))`
 
-Build arbitrary planar profiles from consecutive lines and close the final point back to the first. Use `subtract=True` circles inside an outer profile for through-holes.
+Build arbitrary planar profiles from consecutive lines and close the final point back to the first. Keep open line/arc paths for sweeps; solid extrusions require a closed, non-self-intersecting profile.
+
+Use `circle(..., subtract=True)` only for holes strictly inside an outer profile. Leave clearance from the boundary and other holes: touching, overlapping, or crossing loops are invalid. For example, on `rect(90, 40)`, a radius-3 circle centered at `(87, 20)` touches the right edge, and one centered at `(90, 20)` crosses it. Neither is an interior sketch hole.
+
+`rect()` does not accept `subtract=True`. For rectangular cutouts, extrude a separate rectangular tool and subtract it with `.cut()`. Use the same solid-boolean approach for circular edge notches:
+
+```python
+plate = Part(name="Plate").extrude(Sketch().rect(90, 40), depth=5)
+notch = Part(name="Edge notch tool").extrude(
+    Sketch().circle(3, center=(90, 20)), depth=5,
+)
+plate.cut(notch, name="Edge notch")
+slot = Part(name="Slot tool").extrude(
+    Sketch().rect(10, 4, origin=(20, 18)), depth=5,
+)
+plate.cut(slot, name="Rectangular slot")
+```
 
 ## Solids and features
 
