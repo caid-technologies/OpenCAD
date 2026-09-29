@@ -181,12 +181,61 @@ def test_rejects_invalid_sample_time(document, time):
         evaluate_scene(document, time)
 
 
-def test_shared_browser_parity_samples_are_current(document):
+def test_shared_browser_parity_samples_are_current(
+    document, assert_scene_state_matches
+):
     samples = json.loads((EXAMPLES / "robotPickPlaceLegacy.states.json").read_text())
     for sample in samples:
-        assert evaluate_scene(document, sample["time_s"]) == SceneState.model_validate(
-            sample
+        assert_scene_state_matches(
+            evaluate_scene(document, sample["time_s"]),
+            SceneState.model_validate(sample),
         )
+
+
+def test_state_parity_accepts_observed_windows_quaternion_roundoff(
+    assert_scene_state_matches,
+):
+    samples = json.loads((EXAMPLES / "robotPickPlaceLegacy.states.json").read_text())
+    reference = SceneState.model_validate(next(s for s in samples if s["time_s"] == 4))
+    windows = reference.model_copy(deep=True)
+    # Exact values from the Windows CI failure; all other state fields matched.
+    windows.component_transforms["arm"]["shoulder"].rotation_quaternion_xyzw = (
+        0.0,
+        0.0,
+        0.38268343236508967,
+        0.9238795325112867,
+    )
+    assert windows != reference
+    assert_scene_state_matches(windows, reference)
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["translation", "rotation", "attachment", "placement", "interaction", "shape"],
+)
+def test_state_parity_rejects_meaningful_changes(
+    document, assert_scene_state_matches, field
+):
+    reference = evaluate_scene(document, 4)
+    changed = reference.model_copy(deep=True)
+    if field == "translation":
+        pose = changed.entity_transforms["box"]
+        x, y, z = pose.translation_mm
+        pose.translation_mm = (x + 1e-6, y, z)
+    elif field == "rotation":
+        pose = changed.component_transforms["arm"]["shoulder"]
+        x, y, z, w = pose.rotation_quaternion_xyzw
+        pose.rotation_quaternion_xyzw = (x, y, z + 1e-6, w)
+    elif field == "attachment":
+        changed.attachments["box"].actor_interface = "different-grip"
+    elif field == "placement":
+        changed.placements["box"] = "table"
+    elif field == "interaction":
+        changed.interaction_states["Carry to table"] = "completed"
+    else:
+        del changed.shape_transforms["box"]
+    with pytest.raises(AssertionError):
+        assert_scene_state_matches(changed, reference)
 
 
 def test_world_motion_carries_target_and_can_regrasp_after_release(document):

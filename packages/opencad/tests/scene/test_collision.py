@@ -189,7 +189,9 @@ def test_missing_collider_coverage_is_not_a_clearance_guarantee():
     assert report.unchecked_components == ["arm/arm"]
 
 
-def test_corrected_demo_has_complete_coverage_and_no_exclusions():
+def test_corrected_demo_has_complete_coverage_and_no_exclusions(
+    assert_scene_state_matches,
+):
     doc = SceneDocument.model_validate(
         json.loads((EXAMPLES / "robotPickPlace.json").read_text())["document"]
     )
@@ -198,8 +200,8 @@ def test_corrected_demo_has_complete_coverage_and_no_exclusions():
     assert report.status == "clear" and report.safe_time_s == 12
     assert report.unchecked_components == []
     for sample in json.loads((EXAMPLES / "robotPickPlace.states.json").read_text()):
-        assert evaluate_scene(doc, sample["time_s"]) == SceneState.model_validate(
-            sample
+        assert_scene_state_matches(
+            evaluate_scene(doc, sample["time_s"]), SceneState.model_validate(sample)
         )
     final = evaluate_scene(doc, 12)
     assert final.entity_transforms["box"].translation_mm == pytest.approx((0, 24, 8))
