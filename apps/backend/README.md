@@ -36,7 +36,11 @@ service can run standalone — for example `opencad_server.kernel_router:app`.
 Core packages depend on the `KernelClient` protocol, never on a transport. This
 app chooses the implementation at startup: `HttpKernelClient` when
 `OPENCAD_TREE_LIVE_KERNEL` / `OPENCAD_AGENT_LIVE_KERNEL` are true, otherwise the
-in-process default.
+shared in-process kernel used by `/kernel` mesh and export endpoints. False
+does not enable mock geometry. Standalone agent/tree deployments should enable
+the corresponding flag and configure `OPENCAD_KERNEL_URL` to the aggregate
+backend kernel endpoint. Run the aggregate backend with one worker: kernel
+shapes are in memory and are not shared between worker processes.
 
 ## Tests
 

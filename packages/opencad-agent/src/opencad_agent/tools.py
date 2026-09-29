@@ -173,15 +173,21 @@ class ToolRuntime:
         return segments
 
     def _try_kernel_call(self, operation: str, params: dict[str, Any]) -> str | None:
-        if not self._use_live_kernel or self._kernel_client is None:
+        """Execute real geometry or return None only in explicit mock mode."""
+        if not self._use_live_kernel:
             return None
+        if self._kernel_client is None:
+            raise RuntimeError("Live geometry requires a kernel client.")
         try:
             result = self._kernel_client.call_operation(operation, params)
-            if result.get("ok"):
-                return str(result["shape_id"])
         except Exception as exc:
-            logger.warning("Kernel call for %s failed, using synthetic ID: %s", operation, exc)
-        return None
+            raise RuntimeError(f"Kernel operation '{operation}' failed: {exc}") from exc
+        if not result.get("ok") or not result.get("shape_id"):
+            raise RuntimeError(
+                f"Kernel operation '{operation}' failed: "
+                f"{result.get('message', 'No shape ID returned.')}"
+            )
+        return str(result["shape_id"])
 
     def _latest_feature(self) -> str:
         for node_id in reversed(list(self.tree.nodes.keys())):
@@ -291,6 +297,8 @@ class ToolRuntime:
         feature_id = self._new_feature_id()
         shape_id = self._new_shape_id()
 
+        if self._use_live_kernel and not (base_node.shape_id and tool_node.shape_id):
+            raise RuntimeError("Boolean operands have no kernel geometry.")
         if base_node.shape_id and tool_node.shape_id:
             resolved = self._try_kernel_call(
                 "boolean_cut",
@@ -316,6 +324,8 @@ class ToolRuntime:
         feature_id = self._new_feature_id()
         new_shape_id = self._new_shape_id()
 
+        if self._use_live_kernel and not target_node.shape_id:
+            raise RuntimeError("Fillet target has no kernel geometry.")
         if target_node.shape_id:
             resolved = self._try_kernel_call(
                 "fillet_edges",

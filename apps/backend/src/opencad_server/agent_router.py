@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, HTTPException
@@ -17,12 +16,11 @@ from opencad_agent.service import (
     OpenCadAgentService,
 )
 from opencad_server.api_app import create_api_app
-from opencad_server.http_kernel_client import HttpKernelClient
+from opencad_server.http_kernel_client import configured_kernel_client
 
 router = APIRouter()
 
-_USE_LIVE_KERNEL = os.environ.get("OPENCAD_AGENT_LIVE_KERNEL", "false").lower() == "true"
-_service = OpenCadAgentService(kernel_client=HttpKernelClient() if _USE_LIVE_KERNEL else None)
+_service = OpenCadAgentService(kernel_client=configured_kernel_client("OPENCAD_AGENT_LIVE_KERNEL"))
 
 
 @router.get("/healthz")

@@ -9,6 +9,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from opencad.kernel.client import KernelClient
+
 import httpx
 
 DEFAULT_KERNEL_URL = "http://127.0.0.1:8000"
@@ -55,3 +57,17 @@ class HttpKernelClient:
 
 
 __all__ = ["HttpKernelClient", "kernel_base_url", "DEFAULT_KERNEL_URL"]
+
+
+def configured_kernel_client(live_kernel_env: str) -> KernelClient:
+    """Use an explicit remote kernel or the mesh endpoint's in-process store.
+
+    Import the local router lazily so standalone remote clients do not need
+    to initialize a second OCCT kernel.
+    """
+    if os.environ.get(live_kernel_env, "false").lower() == "true":
+        return HttpKernelClient()
+    from opencad.kernel.client import LocalKernelClient
+    from opencad_server import kernel_router
+
+    return LocalKernelClient(kernel_router._REGISTRY)
