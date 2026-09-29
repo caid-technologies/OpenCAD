@@ -35,7 +35,13 @@ from opencad.kernel.core.models import (
     RigidTransform,
 )
 from opencad.part import Part
-from opencad.runtime import RuntimeContext, get_default_context, reset_default_context, set_default_context
+from opencad.runtime import (
+    RuntimeContext,
+    get_default_context,
+    reset_default_context,
+    set_default_context,
+    use_default_context,
+)
 from opencad.scene import (
     Attachment, Interaction, SceneDocument, SceneEntity, SceneInterface, SceneState,
     SceneCollider, MotionCheck, validate_scene_motion,
@@ -77,6 +83,7 @@ __all__ = [
     "get_default_context",
     "set_default_context",
     "reset_default_context",
+    "use_default_context",
     "main",
     "__version__",
     "DesignArtifact",
