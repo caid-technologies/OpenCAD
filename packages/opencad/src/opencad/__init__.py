@@ -36,6 +36,11 @@ from opencad.kernel.core.models import (
 )
 from opencad.part import Part
 from opencad.runtime import RuntimeContext, get_default_context, reset_default_context, set_default_context
+from opencad.scene import (
+    Attachment, Interaction, SceneDocument, SceneEntity, SceneInterface, SceneState,
+    SceneCollider, MotionCheck, validate_scene_motion,
+    deserialize_scene, evaluate_scene, scene_duration, serialize_scene,
+)
 from opencad.sketch import Sketch
 from opencad.turntable import (
     TurntableDependencyError,
@@ -53,6 +58,19 @@ __all__ = [
     "deserialize_assembly_tree",
     "import_assembly_tree",
     "serialize_assembly_tree",
+    "SceneCollider",
+    "MotionCheck",
+    "validate_scene_motion",
+    "Attachment",
+    "Interaction",
+    "SceneDocument",
+    "SceneEntity",
+    "SceneInterface",
+    "SceneState",
+    "deserialize_scene",
+    "evaluate_scene",
+    "scene_duration",
+    "serialize_scene",
     "Part",
     "Sketch",
     "RuntimeContext",
