@@ -10,9 +10,9 @@ A modular CAD system for parametric, programmable, and AI-assisted design
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 <p align="center">
-  <img src="docs/assets/drone-assembly-turntable.gif" width="32%" alt="Drone assembly turntable" />
+  <img src="docs/assets/mech-r0-walking.gif" width="32%" alt="Mech R0 walking motion preview" />
   <img src="docs/assets/gyroscope.gif" width="32%" alt="Gyroscope model" />
-  <img src="docs/assets/drone-assembly-propellers.gif" width="32%" alt="Drone assembly propellers" />
+  <img src="docs/assets/desktop-lab-robot-operating-cycle.gif" width="32%" alt="Desktop lab robot simulated operating cycle" />
 </p>
 
 ## Install for Claude, Codex, OpenCode, OpenClaw, or NemoClaw
